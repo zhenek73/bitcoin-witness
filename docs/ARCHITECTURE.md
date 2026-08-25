@@ -64,8 +64,19 @@ with one fact type, extending it to richer facts is incremental, not architectur
 | Component | Status |
 |---|---|
 | Native relay contract (`contracts/native`) | v1 skeleton written, not yet built/deployed |
-| EVM receiver contract (`contracts/evm`) | v1 written, not yet deployed |
+| EVM receiver contract (`contracts/evm`) | v1 written; calldata layout verified end-to-end against a real compiled+deployed instance (`contracts/evm/test_receiver.py`) |
 | Attestcoin attestor + Creditcoin devnet | not started |
-| Creditcoin verification contract (`contracts/asc`) | not started |
+| Creditcoin verification contract (`contracts/asc`) | v1 skeleton written, compiles; proof→fact decoding still TODO (needs a real attested transaction to confirm `encodedTransaction`'s format) |
+
+## A note on exSat's current status
+
+exSat's public testnet endpoints are currently unreachable, and public information suggests the
+team has shifted its product focus away from Bitcoin L2 infrastructure. This does not affect the
+architecture above: `utxomng.xsat`, `blksync.xsat`, and `evm_runtime` are open-source contracts
+(see the exSat GitHub organization) that can be run on a self-hosted devnet, independent of
+exSat's own infrastructure or current roadmap. If self-hosted, real Bitcoin block data is
+independently synced and cryptographically verified (proof-of-work + Merkle proofs) rather than
+read from exSat's live network — the same verification logic, just run by us against real Bitcoin
+data. See `CHANGELOG.md` for how this evolves.
 
 See `CHANGELOG.md` for current progress, dated.

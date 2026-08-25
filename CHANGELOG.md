@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-08-25 (3)
+### Added
+- `contracts/evm/test_receiver.py`: automated round-trip test. Verifies the calldata layout our
+  native contract builds by hand is byte-for-byte identical to web3.py's own ABI encoder for
+  `receiveUtxoFact(bytes32,uint32,uint64)`, and that sending it to a real deployed instance of
+  `BitcoinWitnessReceiver` emits `BitcoinUtxoAttested` with the exact values. Passes.
+- `contracts/asc/BitcoinFactVerifier.sol`: v1 Creditcoin-side verification contract. Interfaces
+  Creditcoin's BlockProver precompile (address confirmed two ways — official docs and the actual
+  `gluwa/creditcoin3` runtime source, `AddressU64<4050>`), calls `verifyAndEmit`, and records the
+  proven Bitcoin fact. Compiles. Proof→fact decoding is an explicit TODO (see NatSpec in the file)
+  pending confirmation of the exact `encodedTransaction` format against a real attested tx.
+- Noted exSat's current infrastructure status in `docs/ARCHITECTURE.md` (testnet unreachable,
+  public self-hosting fallback) — doesn't change the architecture, only where it's deployed.
+
 ## 2026-08-25 (2)
 ### Added
 - `contracts/native`: v1 native relay contract (`btcwitness`, Antelope C++/CDT). Reads a Bitcoin
