@@ -1,0 +1,11 @@
+node_modules/
+.env
+.env.*
+*.log
+/target
+/build
+*.wasm
+*.abi
+!contracts/**/*.abi.example
+.DS_Store
+Thumbs.db
