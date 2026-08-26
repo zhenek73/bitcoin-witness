@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-08-25 (5)
+### Changed
+- Corrected the Creditcoin-side integration model. Gluwa's SDK exposes two paths: an older
+  Prover-contract query model (used by the pinned `^0.0.1` in their tutorial) and the current
+  BlockProver-precompile path (`PrecompileBlockProver`, `ProverAPIProofGenerator` in `0.8.0`).
+  `BitcoinFactVerifier` now uses the latter: it proves the payload via the precompile, then
+  decodes it directly.
+- Decoding is possible because Attestcoin's V1 encoding is `abi.encode(uint8 txType, bytes[]
+  chunks)` — `chunks[0]` is always the common transaction fields, the last chunk is always the
+  receipt including logs. Verified against Gluwa's own encoder. Every authentication check now
+  reads from inside the attested bytes rather than a caller-supplied field layout.
+
+### Added
+- `scripts/prove_fact.ts`: generates inclusion + continuity proofs, waits for the height to be
+  attested, and submits to the verifier. Typechecks against the real SDK.
+- `contracts/asc/ExtractFactHarness.sol` + rewritten `test_verifier.py`: 9 tests against payloads
+  built in Attestcoin's real V1 format — happy path, impostor emitter, wrong recipient, wrong
+  event, reverted receipt, wrong topic arity, event buried behind unrelated logs, legacy tx type,
+  and uint32/uint64 boundary values. All pass.
+
 ## 2026-08-25 (4)
 ### Changed
 - Rewrote `contracts/asc/BitcoinFactVerifier.sol` around Attestcoin's actual query model. The

@@ -23,19 +23,16 @@
    transaction + event to Creditcoin.
 
 5. **Creditcoin verification**
-   The attested payload is an ABI encoding of the source transaction *together with its receipt*
-   (so the emitted event is part of what gets proven). Rather than decoding that blob on-chain, a
-   query declares `LayoutSegment{offset,size}` entries naming the exact fields it wants; once
-   proving completes, the Prover contract returns those fields as `ResultSegment{offset,abiBytes}`.
+   The attested payload is not a raw RLP transaction. Attestcoin's V1 encoding is
+   `abi.encode(uint8 txType, bytes[] chunks)`, where `chunks[0]` always holds the common
+   transaction fields and the last chunk always holds the receipt — including its logs. That makes
+   the emitted event recoverable with plain `abi.decode`.
 
-   `contracts/asc/BitcoinFactVerifier.sol` reads a completed query and authenticates it before
-   accepting the fact: correct source chain_key, correct transaction recipient, correct emitting
-   contract, correct event signature, successful receipt status, and a replay guard on queryId.
-   Only then is the Bitcoin fact recorded on Creditcoin.
-
-   (Creditcoin also exposes a lower-level BlockProver precompile taking an explicit Merkle +
-   continuity proof. The query/Prover flow above is the documented path used by Gluwa's own
-   tutorials, and is what this project builds on.)
+   `contracts/asc/BitcoinFactVerifier.sol` calls the BlockProver precompile to prove the payload
+   genuinely occurred at that height on that chain, then decodes it and authenticates the fact
+   before recording it: correct transaction recipient, correct emitting contract, correct event
+   signature, successful receipt status. Every one of those checks reads from inside the attested
+   bytes, so a caller chooses only *which* proven transaction to submit — never what it says.
 
 ## Why this needs no one's permission
 
@@ -76,8 +73,8 @@ with one fact type, extending it to richer facts is incremental, not architectur
 | Native relay contract (`contracts/native`) | v1 skeleton written, not yet built/deployed |
 | EVM receiver contract (`contracts/evm`) | v1 written; calldata layout verified end-to-end against a real compiled+deployed instance (`contracts/evm/test_receiver.py`) |
 | Attestcoin attestor + Creditcoin devnet | not started |
-| Creditcoin verification contract (`contracts/asc`) | v1 written; authentication logic covered by tests incl. 7 negative paths (`contracts/asc/test_verifier.py`) |
-| Off-chain query submission script | not started — needs Gluwa's QueryBuilder to emit the layout this contract expects |
+| Creditcoin verification contract (`contracts/asc`) | v1 written; decoding + authentication covered by 9 tests against real V1-format payloads, incl. 5 negative paths (`contracts/asc/test_verifier.py`) |
+| Proof generation + submission script (`scripts/prove_fact.ts`) | v1 written, typechecks; not yet run against a live network |
 
 ## A note on exSat's current status
 

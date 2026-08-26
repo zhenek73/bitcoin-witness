@@ -1,160 +1,153 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-/// @title Attestcoin Prover interface
-/// @notice Minimal interface to Creditcoin's Attestcoin Prover contract.
-/// @dev Structs and signatures taken verbatim from the Prover ABI shipped in
-///      Gluwa's official tutorial repo (`ccnext-testnet-bridge-examples`,
-///      src/contract-abis/prover.json), not reconstructed by hand.
+/// @title Attestcoin BlockProver precompile
+/// @dev Address and signature confirmed three ways: the official docs, the
+///      Creditcoin runtime source (`runtime/src/precompiles.rs`:
+///      `PrecompileAt<AddressU64<4050>, BlockProverPrecompile<R>, ...>` —
+///      4050 == 0xFD2), and Gluwa's SDK
+///      (`BLOCK_PROVER_PRECOMPILE_ADDRESS` in the cc-next-query-builder
+///      package published by Gluwa).
 ///
-///      How the query model works: the attested payload is an ABI encoding of
-///      the source transaction *and its receipt*. Rather than decoding that
-///      blob on-chain, a query declares `LayoutSegment{offset,size}` entries
-///      naming the fields it wants, and the prover returns exactly those as
-///      `ResultSegment{offset, abiBytes}` — one 32-byte word each, in the
-///      order requested. Segments are built off-chain with Gluwa's
-///      QueryBuilder (see scripts/).
-interface IAttestcoinProver {
-    struct LayoutSegment {
-        uint64 offset;
-        uint64 size;
+///      NOTE: `verify` reverts on failure — it does not return false. Treat a
+///      successful return as proof; there is no falsy branch to check.
+interface IBlockProver {
+    struct MerkleProofEntry {
+        bytes32 hash;
+        bool isLeft;
     }
 
-    struct ChainQuery {
-        uint64 chainId; // Attestcoin chain_key of the source chain (NOT the EVM chainId)
-        uint64 height; // block height on the source chain
-        uint64 index; // transaction index within that block
-        LayoutSegment[] layoutSegments;
+    struct TransactionMerkleProof {
+        bytes32 root;
+        MerkleProofEntry[] siblings;
     }
 
-    struct ResultSegment {
-        uint256 offset;
-        bytes32 abiBytes;
+    struct ContinuityProof {
+        bytes32 lowerEndpointDigest;
+        bytes32[] roots;
     }
 
-    struct QueryDetails {
-        uint8 state;
-        ChainQuery query;
-        uint256 escrowedAmount;
-        address principal;
-        uint256 estimatedCost;
-        uint256 timestamp;
-        ResultSegment[] resultSegments;
-    }
-
-    function getQueryDetails(bytes32 queryId) external view returns (QueryDetails memory);
+    function verifyAndEmit(
+        uint64 chainKey,
+        uint64 height,
+        bytes calldata encodedTransaction,
+        TransactionMerkleProof calldata merkleProof,
+        ContinuityProof calldata continuityProof
+    ) external returns (bool);
 }
 
 /// @title Bitcoin Fact Verifier
-/// @notice Deployed on Creditcoin. Consumes a proven Attestcoin query for a
-///         transaction that called `BitcoinWitnessReceiver.receiveUtxoFact`
-///         on exSat's EVM layer, authenticates it, and records the Bitcoin
-///         fact it carried as proven on Creditcoin.
+/// @notice Deployed on Creditcoin. Verifies, entirely on-chain, that a
+///         transaction really occurred on exSat's EVM layer in which our
+///         `BitcoinWitnessReceiver` emitted a Bitcoin UTXO fact — then records
+///         that fact.
 ///
-/// @dev v1 scope: the (txid, index) -> value fact. See docs/ARCHITECTURE.md.
+/// @dev The attested payload is not a raw RLP transaction. Attestcoin's V1
+///      encoding is `abi.encode(uint8 txType, bytes[] chunks)`, where
+///      `chunks[0]` always holds the common transaction fields and the LAST
+///      chunk always holds the receipt (status, gasUsed, logs, logsBloom).
+///      That makes the emitted logs recoverable with plain `abi.decode`, so
+///      this contract can authenticate the fact itself rather than trusting a
+///      caller-supplied field layout. Layout verified against Gluwa's own
+///      encoder (cc-next-query-builder package, encoding/abi/v1.js).
 ///
-///      The query this contract expects must be built with exactly this
-///      layout, in this order (see scripts/ for the QueryBuilder script):
-///        [0] RxStatus              — receipt status (1 == success)
-///        [1] TxTo                  — transaction recipient
-///        [2] event address         — contract that emitted the event
-///        [3] event signature       — topic0
-///        [4] event arg `txid`
-///        [5] event arg `index`
-///        [6] event arg `value`
+///      v1 scope: the (txid, index) -> value fact. See docs/ARCHITECTURE.md.
 contract BitcoinFactVerifier {
-    IAttestcoinProver public immutable prover;
+    struct EvmLog {
+        address addr;
+        bytes32[] topics;
+        bytes data;
+    }
 
-    /// Attestcoin chain_key under which our exSat source chain is registered.
-    /// NOTE: chain_key is Attestcoin's own registry id and is NOT the EVM
-    /// chainId — they differ (e.g. Ethereum mainnet is chainId 1 but
-    /// chain_key 3). Set at construction to whatever `register_chain`
-    /// assigned.
+    IBlockProver public constant BLOCK_PROVER = IBlockProver(0x0000000000000000000000000000000000000FD2);
+
+    /// Attestcoin chain_key for our exSat source chain, as assigned by
+    /// `register_chain`. NOT the EVM chainId — the two differ (Ethereum
+    /// mainnet is chainId 1 but chain_key 3), and confusing them yields a
+    /// source check that silently never matches.
     uint64 public immutable exsatChainKey;
 
-    /// Address of our `BitcoinWitnessReceiver` on exSat's EVM layer. Facts
-    /// are only accepted if they were emitted by this contract, in a
-    /// transaction sent to this contract.
+    /// Our `BitcoinWitnessReceiver` on exSat's EVM layer.
     address public immutable expectedEmitter;
 
     /// keccak256("BitcoinUtxoAttested(bytes32,uint32,uint64,address)")
     bytes32 public constant EVENT_SIGNATURE = 0x8ada6206a51055064d662d325820d3282b8bff502d55098f7182a1d8a64187fe;
 
-    uint256 private constant SEG_RX_STATUS = 0;
-    uint256 private constant SEG_TX_TO = 1;
-    uint256 private constant SEG_EVENT_ADDRESS = 2;
-    uint256 private constant SEG_EVENT_SIGNATURE = 3;
-    uint256 private constant SEG_TXID = 4;
-    uint256 private constant SEG_INDEX = 5;
-    uint256 private constant SEG_VALUE = 6;
-    uint256 private constant SEGMENT_COUNT = 7;
-
-    /// Proven UTXO values, keyed by (txid, vout index).
     mapping(bytes32 => mapping(uint32 => uint64)) public provenUtxoValue;
-    /// True once a (txid, index) pair has been proven — distinguishes a
-    /// genuinely proven zero value from "never proven".
     mapping(bytes32 => mapping(uint32 => bool)) public isProven;
 
-    /// Replay guard. NOTE: a queryId identifies a *transaction*, not an
-    /// individual event — if one transaction ever emits several facts, this
-    /// guard would drop all but the first. v1 relays exactly one fact per
-    /// transaction, so this is correct here; revisit before batching.
-    mapping(bytes32 => bool) public queryUsed;
+    event BitcoinFactProven(bytes32 indexed txid, uint32 index, uint64 value, uint64 height);
 
-    event BitcoinFactProven(bytes32 indexed txid, uint32 index, uint64 value, uint64 height, bytes32 queryId);
-
-    constructor(address proverAddress, uint64 _exsatChainKey, address _expectedEmitter) {
-        prover = IAttestcoinProver(proverAddress);
+    constructor(uint64 _exsatChainKey, address _expectedEmitter) {
         exsatChainKey = _exsatChainKey;
         expectedEmitter = _expectedEmitter;
     }
 
-    /// @notice Record a Bitcoin UTXO fact from an already-proven Attestcoin query.
-    /// @param queryId Id of a query that has completed proving on the Prover contract.
-    function recordProvenFact(bytes32 queryId) external returns (bytes32 txid, uint32 index, uint64 value) {
-        require(!queryUsed[queryId], "BitcoinWitness: query already used");
-        queryUsed[queryId] = true;
+    /// @notice Prove and record a Bitcoin UTXO fact.
+    /// @param height Block height on exSat EVM containing the transaction.
+    /// @param encodedTransaction Attestcoin V1-encoded transaction + receipt.
+    /// @param merkleProof Inclusion proof for that transaction.
+    /// @param continuityProof Proof anchoring the block to an attestation.
+    /// @dev Continuity proofs are bound to attestation state at generation
+    ///      time and go stale — generate one fresh per call rather than
+    ///      reusing an old one.
+    function proveBitcoinFact(
+        uint64 height,
+        bytes calldata encodedTransaction,
+        IBlockProver.TransactionMerkleProof calldata merkleProof,
+        IBlockProver.ContinuityProof calldata continuityProof
+    ) external returns (bytes32 txid, uint32 index, uint64 value) {
+        // Reverts on failure; a plain return means the payload is proven to
+        // have occurred at (chainKey, height).
+        BLOCK_PROVER.verifyAndEmit(exsatChainKey, height, encodedTransaction, merkleProof, continuityProof);
 
-        IAttestcoinProver.QueryDetails memory details = prover.getQueryDetails(queryId);
-        IAttestcoinProver.ResultSegment[] memory segments = details.resultSegments;
-
-        // A query that has not finished proving has no result segments.
-        require(segments.length == SEGMENT_COUNT, "BitcoinWitness: unexpected segment layout");
-
-        // Authenticate the source: the fact is only meaningful if it came
-        // from OUR contract, on the chain we registered. Checking the
-        // emitter without the chain_key would be forgeable — the same
-        // contract address can exist on another chain and emit an
-        // indistinguishable event.
-        require(details.query.chainId == exsatChainKey, "BitcoinWitness: wrong source chain");
-        require(_toAddress(segments[SEG_TX_TO].abiBytes) == expectedEmitter, "BitcoinWitness: wrong tx recipient");
-        require(
-            _toAddress(segments[SEG_EVENT_ADDRESS].abiBytes) == expectedEmitter, "BitcoinWitness: wrong event emitter"
-        );
-        require(segments[SEG_EVENT_SIGNATURE].abiBytes == EVENT_SIGNATURE, "BitcoinWitness: wrong event signature");
-
-        // A reverted transaction can still be included in a block; its
-        // events would not exist, but the status check makes the intent
-        // explicit rather than relying on that.
-        require(uint256(segments[SEG_RX_STATUS].abiBytes) == 1, "BitcoinWitness: source tx did not succeed");
-
-        txid = segments[SEG_TXID].abiBytes;
-        index = uint32(uint256(segments[SEG_INDEX].abiBytes));
-        value = uint64(uint256(segments[SEG_VALUE].abiBytes));
+        (txid, index, value) = _extractFact(encodedTransaction);
 
         provenUtxoValue[txid][index] = value;
         isProven[txid][index] = true;
 
-        emit BitcoinFactProven(txid, index, value, details.query.height, queryId);
+        emit BitcoinFactProven(txid, index, value, height);
     }
 
-    /// @notice Read a previously proven UTXO value.
-    /// @return value satoshis, `proven` false if this pair was never proven.
+    /// @dev Decodes the proven payload and pulls out our event. Everything
+    ///      checked here is inside the attested bytes, so none of it can be
+    ///      forged by the caller: the caller chooses only *which* proven
+    ///      transaction to submit, not what it contains.
+    function _extractFact(bytes calldata encodedTransaction)
+        internal
+        view
+        returns (bytes32 txid, uint32 index, uint64 value)
+    {
+        (, bytes[] memory chunks) = abi.decode(encodedTransaction, (uint8, bytes[]));
+        require(chunks.length >= 2, "BitcoinWitness: malformed payload");
+
+        // Common fields are always chunk 0, across every transaction type.
+        (,,,, address to,,) =
+            abi.decode(chunks[0], (uint64, uint64, address, bool, address, uint256, bytes));
+        require(to == expectedEmitter, "BitcoinWitness: wrong tx recipient");
+
+        // Receipt is always the last chunk, across every transaction type.
+        (uint8 status,, EvmLog[] memory logs,) =
+            abi.decode(chunks[chunks.length - 1], (uint8, uint64, EvmLog[], bytes));
+        require(status == 1, "BitcoinWitness: source tx did not succeed");
+
+        for (uint256 i = 0; i < logs.length; i++) {
+            EvmLog memory log = logs[i];
+            if (log.addr != expectedEmitter) continue;
+            // topics: [0] signature, [1] txid (indexed), [2] relayer (indexed)
+            if (log.topics.length != 3 || log.topics[0] != EVENT_SIGNATURE) continue;
+
+            // Non-indexed args, in declaration order: index (uint32), value (uint64).
+            (uint32 idx, uint64 val) = abi.decode(log.data, (uint32, uint64));
+            return (log.topics[1], idx, val);
+        }
+
+        revert("BitcoinWitness: no matching event in proven transaction");
+    }
+
+    /// @return value satoshis; `proven` is false if this pair was never proven,
+    ///         which a zero value alone could not distinguish.
     function getProvenValue(bytes32 txid, uint32 index) external view returns (uint64 value, bool proven) {
         return (provenUtxoValue[txid][index], isProven[txid][index]);
-    }
-
-    function _toAddress(bytes32 word) private pure returns (address) {
-        return address(uint160(uint256(word)));
     }
 }

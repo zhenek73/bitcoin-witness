@@ -1,0 +1,17 @@
+{
+  "name": "bitcoin-witness-scripts",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "prove_fact": "tsx prove_fact.ts"
+  },
+  "dependencies": {
+    "@gluwa/cc-next-query-builder": "^0.8.0",
+    "ethers": "^6.15.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.13",
+    "tsx": "^4.20.3",
+    "typescript": "^5.6.0"
+  }
+}
