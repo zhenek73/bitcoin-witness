@@ -19,8 +19,10 @@
 // Without it the very first relayutxo call fails with "missing required
 // authority", which reads like a contract bug but is a permissions gap.
 //
-// exSat's native layer is EOS mainnet — these contracts are ordinary accounts
-// there (utxomng.xsat, evm.xsat), so RAM/CPU/NET are paid in EOS as usual.
+// exSat's native contracts (utxomng.xsat, evm.xsat) are accounts on EOS mainnet,
+// so RAM/CPU/NET are paid in EOS as usual. The EVM they expose is a separate
+// execution environment (chain id 7200) whose state lives in evm.xsat's tables —
+// see docs/ARCHITECTURE.md "How exSat relates to EOS".
 //
 // v1 scope (deliberately narrow, see docs/ARCHITECTURE.md "V1 scope"):
 // proves *existence + value* of one unspent Bitcoin output (txid, vout

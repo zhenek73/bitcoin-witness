@@ -4,10 +4,8 @@
 
 1. **Native relay contract** (Antelope C++/CDT, deployed on EOS mainnet)
 
-   exSat's "native layer" is **EOS mainnet itself** — `utxomng.xsat`, `blksync.xsat` and
-   `evm.xsat` are ordinary accounts there (chain id `aca376f2…e906`). So this is standard EOS
-   contract work: RAM/CPU/NET are paid in EOS, and the Bitcoin index lives alongside every other
-   EOS contract rather than on a separate chain of its own.
+   See "How exSat relates to EOS" below — the short version is that exSat's native contracts are
+   accounts on EOS mainnet, so this is standard EOS contract work: RAM/CPU/NET paid in EOS.
 
    The contract reads a Bitcoin fact — a UTXO or a block header — directly from exSat's contracts
    `utxomng.xsat` (UTXO set, spent history) and `blksync.xsat` / the `blocks` table (Bitcoin block
@@ -16,9 +14,9 @@
    in-contract read, not an external call.
 
 2. **Relay to EVM**
-   The native contract calls exSat's `evm_runtime` contract's `call(from, to, value, data,
-   gas_limit)` action, encoding the Bitcoin fact as `data` and targeting our EVM contract's
-   address. This pushes a real, state-changing EVM transaction.
+   The native contract calls the `call(from, to, value, data, gas_limit)` action on `evm.xsat`,
+   encoding the Bitcoin fact as `data` and targeting our EVM contract's address. This pushes a
+   real, state-changing transaction onto exSat's EVM (chain id 7200).
 
 3. **EVM receiver contract** (Solidity, deployed on exSat EVM)
    Decodes the calldata and emits a event containing the Bitcoin fact (e.g. txid, output index,
@@ -42,7 +40,7 @@
 
 ## Why this needs no one's permission
 
-- exSat's `evm_runtime.call()` action requires only the caller's own signature — no allowlist, no
+- `evm.xsat`'s `call()` action requires only the caller's own signature — no allowlist, no
   third-party approval.
 - Creditcoin's `register_chain` extrinsic (which adds a new source chain to Attestcoin) is gated
   only by the chain operator's own `OperatorsOrigin` — self-service on infrastructure the operator
@@ -83,6 +81,36 @@ with one fact type, extending it to richer facts is incremental, not architectur
 | Creditcoin verification contract (`contracts/asc`) | v1 written; decoding + authentication covered by 9 tests against real V1-format payloads, incl. 5 negative paths (`contracts/asc/test_verifier.py`) |
 | Proof generation + submission script (`scripts/prove_fact.ts`) | v1 written, typechecks; not yet run against a live network |
 
+## How exSat relates to EOS
+
+This trips people up, so it is worth stating precisely — both halves are true at different levels:
+
+**exSat's native contracts are accounts on EOS mainnet.** `utxomng.xsat`, `blksync.xsat`,
+`btc.xsat` and `evm.xsat` all live on the chain whose id is `aca376f206b8fc25a6ed44dbdc66547c36c
+6c33e3a119ffbeaef943642f0e906` — the canonical EOS mainnet id. Verified not only through exSat's
+own RPC but through two independent EOS providers (Greymass, EOS Nation) that have nothing to do
+with exSat: all three accounts resolve there, with `utxomng.xsat` holding ~84.7 GB of RAM for the
+Bitcoin UTXO index. Block production and finality come from EOS block producers. (EOS and
+"Vaulta" are the same chain — a rebrand, not a fork; the chain id is unchanged.)
+
+**exSat's EVM is nevertheless a distinct execution environment.** `evm.xsat` implements a full
+EVM with its own chain id (7200), its own address space, its own block numbering (~59M), and its
+own contracts — USDT on exSat is an ERC20 living in that EVM, not an `eosio.token` contract. You
+develop against it in Solidity with MetaMask, not in C++.
+
+The way to hold both facts at once: **the EVM's entire state is stored in `evm.xsat`'s Antelope
+tables.** Querying `evm.xsat`'s `account` table on a plain EOS RPC returns rows of
+`{eth_address, nonce, balance, code_id}` — that *is* the exSat EVM state, ~704 MB of it, paid for
+in EOS RAM. So exSat EVM is a real EVM chain to a Solidity developer, and simultaneously a
+contract on EOS mainnet to an Antelope developer.
+
+Practical consequence for this project: the native relay is EOS work (C++/CDT, EOS RAM/CPU), the
+receiver contract is EVM work (Solidity, chain id 7200), and the hop between them is an Antelope
+inline action — not a bridge, not a cross-chain message.
+
+Not to be confused with **EOS EVM** (`eosio.evm`, chain id 17777), a separate and now-defunct EVM
+on the same EOS mainnet. Different chain id, unrelated to exSat.
+
 ## Data source: exSat mainnet
 
 Bitcoin data is read from exSat's **mainnet**, where the UTXO index is live and current. Verified
@@ -96,10 +124,10 @@ This matters for what the project can honestly claim: the facts it proves are ab
 Bitcoin**, not a testnet or self-generated fixtures.
 
 exSat's own public *testnet* (`chain2`/`evm2`/`scan2.exactsat.io`) was shut down and is not used
-here. The EVM runtime is the account `evm.xsat` (chainid 7200); `eosio.evm` on the same chain is
-EOS EVM (chainid 17777), a different network.
+here.
 
 Because these are EOS mainnet accounts, the Bitcoin index does not depend on exSat operating a
-chain of its own — it keeps advancing as long as synchronizers submit blocks.
+chain of its own — it keeps advancing as long as synchronizers submit blocks, and it inherits
+EOS mainnet's liveness rather than exSat's corporate roadmap.
 
 See `CHANGELOG.md` for current progress, dated.

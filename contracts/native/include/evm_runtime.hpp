@@ -1,7 +1,7 @@
 #pragma once
 #include <eosio/eosio.hpp>
 
-// Minimal interface to exSat's `evm_runtime` contract — just enough to call
+// Minimal interface to exSat's EVM runtime contract (`evm.xsat`) — just enough to call
 // its `call` action, which lets any Antelope account push an arbitrary
 // EVM transaction (self-authorized, no allowlist). We do not compile
 // against exSat's own contract; we build the inline action by hand so this
