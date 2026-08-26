@@ -78,7 +78,8 @@ with one fact type, extending it to richer facts is incremental, not architectur
 |---|---|
 | Native relay contract (`contracts/native`) | v1 written; target account for `evm.xsat` confirmed live on mainnet; not yet built/deployed |
 | EVM receiver contract (`contracts/evm`) | v1 written; calldata layout verified end-to-end against a real compiled+deployed instance (`contracts/evm/test_receiver.py`) |
-| Attestcoin attestor + Creditcoin devnet | not started |
+| Creditcoin devnet + exSat registration (`devnet/`) | **working** — exSat registered as source chain (chain_key 7, chainId 7200, encoding V1), confirmed via the ChainInfo precompile |
+| Attestcoin attestor against exSat | not started — config drafted, exSat WSS endpoint confirmed reachable |
 | Creditcoin verification contract (`contracts/asc`) | v1 written; decoding + authentication covered by 9 tests against real V1-format payloads, incl. 5 negative paths (`contracts/asc/test_verifier.py`) |
 | Proof generation + submission script (`scripts/prove_fact.ts`) | v1 written, typechecks; not yet run against a live network |
 

@@ -1,0 +1,24 @@
+# Local Creditcoin (CC3) devnet for Bitcoin Witness.
+#
+# Why a devnet at all: Attestcoin only attests source chains that have been
+# registered on-chain via `register_chain`, and that extrinsic is gated by the
+# Operators origin. Creditcoin's public network has Ethereum, Sepolia, Polygon
+# Amoy and some local test chains registered — not exSat. Running our own CC3
+# instance makes us the operator of that instance, so we can register exSat and
+# point attestors at it. This is the real Creditcoin protocol, not a stand-in.
+---
+services:
+  cc3:
+    container_name: bw-cc3-devnet
+    image: gluwa/creditcoin3
+    entrypoint: /bin/creditcoin3-node
+    command:
+      - --dev
+      - --validator
+      - --pruning
+      - archive
+      - --unsafe-rpc-external
+      - --rpc-cors
+      - all
+    ports:
+      - "9944:9944"

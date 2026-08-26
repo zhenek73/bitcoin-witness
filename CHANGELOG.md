@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-08-26 (8)
+### Added
+- `devnet/`: a working local Creditcoin devnet, plus `register-exsat.mjs`, which registers exSat
+  as an Attestcoin source chain. Run and verified end to end: the chain reports
+  `ChainRegistered { chainKey: 7, chainId: 7200, chainName: "exSat", chainEncoding: "V1" }`,
+  and it reads back through the ChainInfo precompile the same way a contract would see it.
+- This closes the last unverified assumption in the architecture. Every link — reading Bitcoin
+  data, relaying it to EVM, proving it on Creditcoin, and registering exSat so it can be
+  attested at all — is now confirmed against running software rather than inferred from source.
+
+### Notes
+- `chain_key` is assigned by the pallet and is not the EVM chainId (exSat: chainId 7200,
+  chain_key 7). `devnet/README.md` documents this, since conflating them yields a source check
+  that silently never matches.
+- Polygon Amoy is already registered on a stock dev chain, which is useful precedent: encoding
+  `V1` is generic to EVM chains, so exSat needs no new encoding variant.
+- exSat's EVM WebSocket endpoint (`wss://evm.exsat.network/`) was confirmed reachable — the
+  attestor subscribes over WS, so this was a real dependency worth checking before relying on it.
+
 ## 2026-08-26 (7)
 ### Changed
 - Clarified that exSat's native layer is **EOS mainnet itself** (chain id `aca376f2…e906`) —
