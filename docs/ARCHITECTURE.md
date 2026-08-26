@@ -74,7 +74,7 @@ with one fact type, extending it to richer facts is incremental, not architectur
 
 | Component | Status |
 |---|---|
-| Native relay contract (`contracts/native`) | v1 written; target account for `evm.xsat` confirmed live on mainnet; not yet built/deployed |
+| Native relay contract (`contracts/native`) | **builds** with CDT 4.1.0 (~11 KB wasm); UTXO key derivation verified against live chain data; not yet deployed |
 | EVM receiver contract (`contracts/evm`) | v1 written; calldata layout verified end-to-end against a real compiled+deployed instance (`contracts/evm/test_receiver.py`) |
 | Creditcoin devnet + exSat registration (`devnet/`) | **working** — exSat registered as source chain (chain_key 7, chainId 7200, encoding V1), confirmed via the ChainInfo precompile |
 | Attestcoin attestor against exSat | **working** — attesting live exSat mainnet blocks; attestation for height 59225940 finalized on Creditcoin, header hash matches exSat's own RPC exactly |

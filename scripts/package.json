@@ -3,7 +3,8 @@
   "private": true,
   "license": "MIT",
   "scripts": {
-    "prove_fact": "tsx prove_fact.ts"
+    "prove_fact": "tsx prove_fact.ts",
+    "demo": "tsx demo.ts"
   },
   "dependencies": {
     "@gluwa/cc-next-query-builder": "^0.8.0",

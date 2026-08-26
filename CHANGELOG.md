@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-08-26 (11)
+### Added
+- `scripts/demo.ts`: end-to-end walkthrough that proves one real Bitcoin UTXO from exSat's index
+  through to Creditcoin, printing each hop. `--dry-run` walks the read-only steps without
+  spending anything.
+- Verified against live data. For a real early coinbase output it reports exSat indexed to
+  Bitcoin height 959,115 across 166,186,512 UTXOs, and resolves the output at 5,000,000,000 sats
+  (50 BTC) via the `byutxoid` index.
+
+## 2026-08-26 (10)
+### Added
+- `contracts/native/build.sh` and `DEPLOY.md`. The native relay contract **compiles** with
+  Antelope CDT 4.1.0 into an ~11 KB wasm with a correct ABI (`relayutxo(checksum256, uint32,
+  bytes, uint64)`). At the RAM spot price read from `eosio`'s `rammarket`, that is roughly
+  3.8 EOS to deploy.
+- Verified the contract's UTXO lookup against live chain data. It derives the `byutxoid`
+  secondary key as `sha256(txid || index_le32)`; computing that for a known UTXO and querying
+  `utxomng.xsat` on a public EOS RPC returned exactly that row. This was worth checking — a
+  mismatched key derivation would not error, it would silently find nothing.
+
 ## 2026-08-26 (9)
 ### Added
 - `devnet/bootstrap-attestor.mjs` + `devnet/attestor-config.yaml`: brings up an Attestcoin
