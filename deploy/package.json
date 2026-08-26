@@ -1,0 +1,13 @@
+{
+  "name": "bitcoin-witness-deploy",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "check": "node deploy.mjs --check",
+    "deploy": "node deploy.mjs"
+  },
+  "dependencies": {
+    "@wharfkit/antelope": "^1.0.0"
+  }
+}
