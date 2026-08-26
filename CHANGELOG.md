@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-08-26 (7)
+### Changed
+- Clarified that exSat's native layer is **EOS mainnet itself** (chain id `aca376f2…e906`) —
+  `utxomng.xsat`, `blksync.xsat` and `evm.xsat` are ordinary accounts there, not a separate
+  chain. The native side of this project is therefore standard EOS contract work, with RAM/CPU/NET
+  paid in EOS.
+- Documented the deployment requirement this implies: the relay contract sends an inline action
+  to `evm.xsat` as itself, so its account needs `@eosio.code` in `active`. Without it the first
+  call fails with "missing required authority".
+
 ## 2026-08-26 (6)
 ### Changed
 - Data source is exSat **mainnet**, where the Bitcoin UTXO index is live: 166,186,512 UTXOs at

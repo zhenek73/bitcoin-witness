@@ -2,8 +2,14 @@
 
 ## Components
 
-1. **Native relay contract** (Antelope C++/CDT, deployed on exSat's native layer)
-   Reads a Bitcoin fact — a UTXO or a block header — directly from exSat's native contracts
+1. **Native relay contract** (Antelope C++/CDT, deployed on EOS mainnet)
+
+   exSat's "native layer" is **EOS mainnet itself** — `utxomng.xsat`, `blksync.xsat` and
+   `evm.xsat` are ordinary accounts there (chain id `aca376f2…e906`). So this is standard EOS
+   contract work: RAM/CPU/NET are paid in EOS, and the Bitcoin index lives alongside every other
+   EOS contract rather than on a separate chain of its own.
+
+   The contract reads a Bitcoin fact — a UTXO or a block header — directly from exSat's contracts
    `utxomng.xsat` (UTXO set, spent history) and `blksync.xsat` / the `blocks` table (Bitcoin block
    headers: hash, previous hash, merkle root, timestamp, bits, nonce, cumulative work). Antelope
    contract tables are publicly readable by any other contract on the chain, so this is a direct
@@ -89,6 +95,10 @@ This matters for what the project can honestly claim: the facts it proves are ab
 Bitcoin**, not a testnet or self-generated fixtures.
 
 exSat's own public *testnet* (`chain2`/`evm2`/`scan2.exactsat.io`) was shut down and is not used
-here. The EVM runtime on mainnet is the account `evm.xsat` (chainid 7200).
+here. The EVM runtime is the account `evm.xsat` (chainid 7200); `eosio.evm` on the same chain is
+EOS EVM (chainid 17777), a different network.
+
+Because these are EOS mainnet accounts, the Bitcoin index does not depend on exSat operating a
+chain of its own — it keeps advancing as long as synchronizers submit blocks.
 
 See `CHANGELOG.md` for current progress, dated.

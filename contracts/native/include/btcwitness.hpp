@@ -10,6 +10,18 @@
 // event is what Creditcoin's Attestcoin protocol later attests and
 // verifies. See ../../../docs/ARCHITECTURE.md for the full picture.
 //
+// DEPLOYMENT REQUIREMENT: this contract sends an inline action to `evm.xsat`
+// authorized as itself, so its own account needs `<account>@eosio.code` in its
+// `active` permission:
+//
+//   cleos set account permission <account> active --add-code
+//
+// Without it the very first relayutxo call fails with "missing required
+// authority", which reads like a contract bug but is a permissions gap.
+//
+// exSat's native layer is EOS mainnet — these contracts are ordinary accounts
+// there (utxomng.xsat, evm.xsat), so RAM/CPU/NET are paid in EOS as usual.
+//
 // v1 scope (deliberately narrow, see docs/ARCHITECTURE.md "V1 scope"):
 // proves *existence + value* of one unspent Bitcoin output (txid, vout
 // index, value in satoshis). scriptpubkey / address is out of scope for
