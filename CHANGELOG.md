@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-08-26 (9)
+### Added
+- `devnet/bootstrap-attestor.mjs` + `devnet/attestor-config.yaml`: brings up an Attestcoin
+  attestor watching exSat, and documents the ordering that makes it work.
+- **The attestor is attesting real exSat mainnet blocks.** It produced an attestation for height
+  59225940, reached quorum, and the attestation is finalized on Creditcoin. The stored
+  `headerHash` (`0xe47664ed…53ff6`) is byte-identical to what exSat's own RPC returns for that
+  block — so this is the protocol attesting live chain data, not fixtures.
+
+### Notes on getting an attestor running
+Three non-obvious preconditions, each of which fails in a way that does not name the real cause:
+- The stash and the attestor must be **different** accounts; using one account for both fails
+  with `InvalidAttestorAccount`.
+- `registerAttestor` is `ensure_signed`, not a sudo call. Wrapping it in sudo succeeds but
+  registers the sudo pseudo-account, so the attestor never becomes `Idle`.
+- The attestor submits its own `attest()` only once it already sees itself as `Idle` on-chain.
+  Before that it logs `skipping attest() — already registered status=None`, which reads as the
+  opposite of what is happening.
+
+Quorum (`targetSampleSize`) defaults to 3, so a single-attestor devnet needs it lowered to 1, and
+that change stays pending until an epoch boundary or `forceApplyUpdates()`.
+
 ## 2026-08-26 (8)
 ### Added
 - `devnet/`: a working local Creditcoin devnet, plus `register-exsat.mjs`, which registers exSat

@@ -1,0 +1,14 @@
+---
+attestor:
+  name: "Bitcoin Witness Attestor"
+  chain_key: 7
+  secret: "0x398f0c28f98885e046333d4a41c19cee4c37368a9832c6502f6cfd182e2aef89"
+
+api:
+  port: 9100
+
+eth:
+  url: "wss://evm.exsat.network/"
+
+cc3:
+  url: "ws://127.0.0.1:9944"

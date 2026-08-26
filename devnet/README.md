@@ -48,7 +48,51 @@ For reference, what a fresh dev chain already has registered:
 Polygon Amoy being there is a useful precedent: encoding `V1` is not Ethereum-specific, it
 applies to EVM chains generally — which is why exSat needs no new encoding variant.
 
-## Attestors
+## Bootstrapping an attestor
+
+A registered chain still needs an attestor watching it. The sequence that works — each step
+exists because the previous one is a precondition, and skipping one fails in a way that does not
+name the real cause:
+
+```bash
+node bootstrap-attestor.mjs      # stash bonds, registers the attestor, sets quorum, elects
+docker compose up -d attestor    # attestor submits its BLS key and starts producing
+```
+
+Three things about this are worth knowing before debugging it yourself:
+
+1. **The stash and the attestor must be different accounts.** `registerAttestor(chainKey,
+   attestorId)` is signed by the stash (which bonds the funds) and names a *different* account as
+   the attestor. Passing the same account for both fails with `InvalidAttestorAccount`.
+
+2. **`registerAttestor` is `ensure_signed`, not a sudo call.** Wrapping it in `sudo.sudo(...)`
+   succeeds — and does nothing useful, because the caller becomes the sudo pseudo-account rather
+   than your stash. It has to be signed directly.
+
+3. **The attestor only submits its own `attest()` if it already sees itself as `Idle` on-chain.**
+   Its startup logs `skipping attest() — already registered status=None` when it finds no record
+   at all, which reads like the opposite of what happened. Register it first, then start it.
+
+Quorum is `targetSampleSize`. It defaults to 3, so a single-attestor devnet never reaches quorum
+until you lower it to 1 — and that change lands in `pendingTargetSampleSize` until an epoch
+boundary or `forceApplyUpdates()`.
+
+## Verified end to end
+
+Run on 2026-08-26 against live exSat mainnet:
+
+```
+📡 produced local attestation digest=0x9768a07f… height=59225940
+🗳️ quorum reached digest=0x9768a07f… height=59225940 votes=1
+✅ genesis attestation finalized on-chain height=59225940
+```
+
+The attestation stored on Creditcoin records `headerHash`
+`0xe47664ed9713c33aeb7397b002a8ad021e48ce4ec625368846aa6b8621953ff6` for height 59225940 — which
+is byte-identical to what exSat's own RPC returns for that block. Attestcoin is attesting real
+exSat blocks, not fixtures.
+
+## Attestor config
 
 Attestors are a separate binary in the same image, configured per source chain. The relevant
 settings for exSat:

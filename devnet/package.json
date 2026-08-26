@@ -4,7 +4,8 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "register": "node register-exsat.mjs"
+    "register": "node register-exsat.mjs",
+    "bootstrap-attestor": "node bootstrap-attestor.mjs"
   },
   "dependencies": {
     "@polkadot/api": "^16.0.0"
