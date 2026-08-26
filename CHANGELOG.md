@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-08-25 (4)
+### Changed
+- Rewrote `contracts/asc/BitcoinFactVerifier.sol` around Attestcoin's actual query model. The
+  attested payload is an ABI encoding of the source transaction *and its receipt*; consumers
+  declare `LayoutSegment{offset,size}` entries for the fields they want and read back
+  `ResultSegment{offset,abiBytes}` — no on-chain transaction decoding needed. Structs taken
+  verbatim from the Prover ABI in Gluwa's official tutorial repo. This removes the previous
+  decoding TODO entirely.
+- The verifier now authenticates a fact on five independent axes before accepting it: source
+  chain_key, transaction recipient, emitting contract, event signature, and receipt status —
+  plus a replay guard on queryId.
+
+### Added
+- `contracts/asc/MockAttestcoinProver.sol` + `contracts/asc/test_verifier.py`: test suite for the
+  verifier. Covers the happy path and 7 negative paths — replayed query, forged emitter, wrong
+  transaction recipient, same address on a different source chain, different event from our own
+  contract, reverted source transaction, and a query that hasn't finished proving. All pass.
+
 ## 2026-08-25 (3)
 ### Added
 - `contracts/evm/test_receiver.py`: automated round-trip test. Verifies the calldata layout our
