@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-08-26 (6)
+### Changed
+- Data source is exSat **mainnet**, where the Bitcoin UTXO index is live: 166,186,512 UTXOs at
+  Bitcoin height 959,115, verified directly against the public RPC. Block headers carry real
+  proof-of-work and chain correctly; blocks are submitted by real mining pools. exSat's public
+  testnet was shut down and is not used.
+- Confirmed the EVM runtime account on mainnet is `evm.xsat` (chainid 7200) and corrected
+  `contracts/native`, which previously carried a placeholder. The old placeholder could never
+  have worked — Antelope account names cannot contain underscores.
+
 ## 2026-08-25 (5)
 ### Changed
 - Corrected the Creditcoin-side integration model. Gluwa's SDK exposes two paths: an older

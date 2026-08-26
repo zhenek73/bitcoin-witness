@@ -15,15 +15,20 @@
 //   -> only check inside the action is require_auth(from), so `from` can be
 //      our own contract account authorizing with its own permission.
 //
-// TODO before real deployment: confirm the exact account name the
-// evm_runtime contract is deployed under on exSat testnet (check
-// https://scan2.exactsat.io or query the chain directly) — "evm_runtime" is
-// the contract's project/build name, not a confirmed on-chain account name.
+// The EVM runtime is deployed on exSat's native mainnet under the account
+// `evm.xsat` — confirmed live: its `config` table reports chainid 7200
+// (exSat EVM mainnet), genesis 2024-10-09, and its ABI exposes the `call`
+// action used below.
+//
+// Note `evm_runtime` is the contract's *project* name and is not a valid
+// Antelope account name (underscores are not permitted), so it can never be
+// the on-chain account. `eosio.evm` also exists on this chain but reports
+// chainid 17777 (EOS EVM) — a different network, not our target.
 
 namespace exsat {
     using namespace eosio;
 
-    static constexpr eosio::name EVM_RUNTIME_ACCOUNT = "evm_runtime"_n;  // TODO: verify on testnet
+    static constexpr eosio::name EVM_RUNTIME_ACCOUNT = "evm.xsat"_n;
 
     inline void evm_call(eosio::name from, const std::vector<char>& to, const std::vector<char>& value,
                           const std::vector<char>& data, uint64_t gas_limit) {

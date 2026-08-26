@@ -70,21 +70,25 @@ with one fact type, extending it to richer facts is incremental, not architectur
 
 | Component | Status |
 |---|---|
-| Native relay contract (`contracts/native`) | v1 skeleton written, not yet built/deployed |
+| Native relay contract (`contracts/native`) | v1 written; target account for `evm.xsat` confirmed live on mainnet; not yet built/deployed |
 | EVM receiver contract (`contracts/evm`) | v1 written; calldata layout verified end-to-end against a real compiled+deployed instance (`contracts/evm/test_receiver.py`) |
 | Attestcoin attestor + Creditcoin devnet | not started |
 | Creditcoin verification contract (`contracts/asc`) | v1 written; decoding + authentication covered by 9 tests against real V1-format payloads, incl. 5 negative paths (`contracts/asc/test_verifier.py`) |
 | Proof generation + submission script (`scripts/prove_fact.ts`) | v1 written, typechecks; not yet run against a live network |
 
-## A note on exSat's current status
+## Data source: exSat mainnet
 
-exSat's public testnet endpoints are currently unreachable, and public information suggests the
-team has shifted its product focus away from Bitcoin L2 infrastructure. This does not affect the
-architecture above: `utxomng.xsat`, `blksync.xsat`, and `evm_runtime` are open-source contracts
-(see the exSat GitHub organization) that can be run on a self-hosted devnet, independent of
-exSat's own infrastructure or current roadmap. If self-hosted, real Bitcoin block data is
-independently synced and cryptographically verified (proof-of-work + Merkle proofs) rather than
-read from exSat's live network — the same verification logic, just run by us against real Bitcoin
-data. See `CHANGELOG.md` for how this evolves.
+Bitcoin data is read from exSat's **mainnet**, where the UTXO index is live and current. Verified
+directly against `https://rpc-sg.exsat.network` on 2026-08-26:
+
+- `utxomng.xsat` holds **166,186,512 UTXOs** at Bitcoin height **959,115**
+- block headers carry real proof-of-work (19 leading zeros) and chain correctly parent-to-child
+- blocks are being submitted by real mining pools (e.g. `f2pool.sat`)
+
+This matters for what the project can honestly claim: the facts it proves are about **real
+Bitcoin**, not a testnet or self-generated fixtures.
+
+exSat's own public *testnet* (`chain2`/`evm2`/`scan2.exactsat.io`) was shut down and is not used
+here. The EVM runtime on mainnet is the account `evm.xsat` (chainid 7200).
 
 See `CHANGELOG.md` for current progress, dated.
