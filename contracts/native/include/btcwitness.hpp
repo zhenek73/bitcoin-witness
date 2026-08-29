@@ -37,6 +37,11 @@ namespace bitcoinwitness {
        public:
         using contract::contract;
 
+        // A bare emit costs ~30k gas; 50k leaves headroom without being a
+        // blank cheque. See relayutxo() for why both bounds matter.
+        static constexpr uint64_t MIN_GAS_LIMIT = 50000;
+        static constexpr uint64_t MAX_GAS_LIMIT = 1000000;
+
         /**
          * ## ACTION `relayutxo`
          *

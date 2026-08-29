@@ -8,6 +8,13 @@ void btc_witness::relayutxo(const checksum256& txid, const uint32_t index, const
                              const uint64_t gas_limit) {
     require_auth(get_self());
     check(evm_to.size() == 20, "evm_to must be a 20-byte EVM address");
+    // Bounds, not decoration. Too little gas and the EVM transaction reverts
+    // while this Antelope transaction still succeeds -- no event is emitted,
+    // so there is nothing for Attestcoin to attest and the failure surfaces
+    // nowhere near its cause. Too much just wastes the account's BTC balance
+    // on exSat EVM (gas there is denominated in BTC, via btc.xsat).
+    check(gas_limit >= MIN_GAS_LIMIT, "gas_limit too low; the EVM call would run out of gas and emit nothing");
+    check(gas_limit <= MAX_GAS_LIMIT, "gas_limit unreasonably high");
 
     // Cross-contract read of exSat's `utxomng.xsat` `utxos` table. This is a
     // plain multi_index read scoped to their account — no permission from

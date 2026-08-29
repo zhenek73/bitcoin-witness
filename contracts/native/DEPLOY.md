@@ -1,7 +1,8 @@
 # Deploying the native relay contract
 
 The native side runs on **EOS mainnet** (that is where exSat's contracts live — see
-`docs/ARCHITECTURE.md`). Standard Antelope deployment, with one easily-missed permission step.
+`docs/ARCHITECTURE.md`). Standard Antelope deployment, with two easily-missed steps: one
+permission, one balance.
 
 ## Build
 
@@ -9,11 +10,19 @@ The native side runs on **EOS mainnet** (that is where exSat's contracts live �
 ./build.sh          # -> build/btcwitness.wasm (~11 KB), build/btcwitness.abi
 ```
 
-## Cost
+## Cost, in both currencies
 
-RAM is the only meaningful cost. At the spot price read from `eosio`'s `rammarket`
-(~0.3409 EOS/KB at time of writing), an 11 KB contract is roughly **3.8 EOS**, plus a little for
-the ABI and table rows. CPU/NET are staked, not spent.
+The relay spends resources on **two** ledgers, and it is easy to budget only for the first.
+
+| What | Where | Roughly |
+|---|---|---|
+| contract code (RAM) | EOS mainnet | ~11 KB × 0.34 EOS/KB ≈ **3.8 EOS**, one-off |
+| CPU / NET | EOS mainnet | staked, not spent |
+| **gas for the relayed EVM transaction** | **exSat EVM, in BTC** | ~50k gas × 500,000 wei ≈ **2.5 sats per relay** |
+
+The last row is the one that gets missed. `evm.xsat`'s config reports
+`token_contract: btc.xsat`, `gas_price: 500000` — gas on exSat EVM is denominated in **BTC**,
+not EOS and not XSAT. The amount is trivial; the balance being non-zero is not optional.
 
 ## Deploy
 
@@ -21,7 +30,7 @@ the ABI and table rows. CPU/NET are staked, not spent.
 cleos -u https://eos.greymass.com set contract <account> ./build btcwitness.wasm btcwitness.abi
 ```
 
-## Required: `@eosio.code`
+## Required 1: `@eosio.code`
 
 The contract sends an inline action to `evm.xsat` authorized as itself, which Antelope refuses
 unless the account's `active` permission includes its own code:
@@ -32,6 +41,50 @@ cleos -u https://eos.greymass.com set account permission <account> active --add-
 
 Skipping this makes the first `relayutxo` call fail with `missing required authority` — which
 reads like a contract bug but is a permissions gap.
+
+## Required 2: fund the account's EVM address with BTC
+
+`evm.xsat::call(from, ...)` runs the transaction as `from`'s **reserved EVM address** and
+charges gas to that address's balance inside exSat EVM. The address is derived from the Antelope
+account name — no registration step, it simply exists:
+
+```
+0xbbbbbbbb ‖ name_u64 (8 bytes, big-endian) ‖ 8 zero bytes
+```
+
+For the account `btcwitness`:
+
+```
+0xbBBbbBbb3E51c7666AC600000000000000000000
+```
+
+Send BTC into exSat EVM by transferring from `btc.xsat` to `evm.xsat` with that address in the
+memo. With a zero balance the EVM transaction fails on insufficient funds — and it fails on the
+EVM side, so the Antelope transaction can still look successful while no event is ever emitted.
+That failure mode is why this is a checklist item and not a footnote.
+
+> **Who pays, longer term.** Having the relay account carry the gas is fine for a demo but wrong
+> as a product: the party who wants the fact proven should pay for it. The natural v2 is a
+> deposit-and-charge table on `btcwitness` (caller tops up, `relayutxo` debits their balance),
+> or accepting an EOS transfer whose `memo` carries the UTXO to relay. Both keep the contract
+> permissionless while moving the cost to whoever benefits.
+
+## Deploying the two EVM-side contracts
+
+Constructor arguments matter and are easy to get subtly wrong:
+
+```
+BitcoinWitnessReceiver(relayer)            # relayer = btcwitness's reserved address, above
+BitcoinFactVerifier(chainKey, emitter, relayer)
+                     │         │          └─ same reserved address
+                     │         └──────────── the deployed BitcoinWitnessReceiver on exSat EVM
+                     └────────────────────── chain_key from register_chain (7 on our devnet),
+                                             NOT the EVM chainId 7200
+```
+
+The `relayer` argument to `BitcoinFactVerifier` is what makes a proven fact mean anything —
+without it, anyone can call `receiveUtxoFact` directly and have invented numbers proven as real
+Bitcoin. Do not deploy with a placeholder.
 
 ## Sanity check before relaying
 

@@ -1,8 +1,17 @@
 ---
+# Attestor configuration for the exSat source chain.
+#
+# The secret is read from the environment, not stored here. Generate one and
+# export it before starting the attestor:
+#
+#   export ATTESTOR_SECRET=0x$(openssl rand -hex 32)
+#
+# (A key that lives in a public repository is not a key. The one that used to
+# be inlined here has been discarded.)
 attestor:
   name: "Bitcoin Witness Attestor"
-  chain_key: 7
-  secret: "0x398f0c28f98885e046333d4a41c19cee4c37368a9832c6502f6cfd182e2aef89"
+  chain_key: 7                 # assigned by register_chain, NOT the EVM chainId
+  secret: "${ATTESTOR_SECRET}"
 
 api:
   port: 9100
