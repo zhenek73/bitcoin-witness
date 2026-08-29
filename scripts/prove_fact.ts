@@ -36,7 +36,7 @@ const PROOF_API_URL = process.env.PROOF_API_URL ?? '';
 
 const VERIFIER_ABI = [
   'function proveBitcoinFact(uint64 height, bytes encodedTransaction, (bytes32,(bytes32,bool)[]) merkleProof, (bytes32,bytes32[]) continuityProof) returns (bytes32 txid, uint32 index, uint64 value)',
-  'function getProvenValue(bytes32 txid, uint32 index) view returns (uint64 value, bool proven)',
+  'function getProvenValue(bytes32 txid, uint32 index) view returns (uint64 value, uint64 sourceHeight, uint64 provenAt, bool proven)',
   'event BitcoinFactProven(bytes32 indexed txid, uint32 index, uint64 value, uint64 height)',
 ];
 
