@@ -17,8 +17,11 @@ contract BitcoinWitnessReceiver {
     ///         ("reserved") address of the native `btcwitness` account.
     /// @dev exSat's EVM derives it deterministically from the Antelope account
     ///      name: 0xbbbbbbbb ‖ name_u64 (8 bytes, big-endian) ‖ 8 zero bytes.
-    ///      For the account `btcwitness` that is
-    ///      0xbBBbbBbb3E51c7666AC600000000000000000000.
+    ///      For this project's account, `btcwitness11`, that is
+    ///      0xBbbBbBBb3E51C7666aC602100000000000000000. Derive it with
+    ///      scripts/reserved-address.mjs rather than by hand — a wrong address
+    ///      here does not fail at deploy time, it fails as every proof being
+    ///      rejected later.
     address public immutable relayer;
 
     /// @notice Emitted once per relayed Bitcoin UTXO fact.

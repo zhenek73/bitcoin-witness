@@ -52,10 +52,19 @@ account name — no registration step, it simply exists:
 0xbbbbbbbb ‖ name_u64 (8 bytes, big-endian) ‖ 8 zero bytes
 ```
 
-For the account `btcwitness`:
+Do not hand-compute it — `btcwitness` and `btcwitness11` differ by two characters and give
+different addresses, and a wrong one fails only much later, as every proof being rejected with
+"no matching event". Use the script:
+
+```bash
+node ../../scripts/reserved-address.mjs btcwitness11
+# 0xBbbBbBBb3E51C7666aC602100000000000000000
+```
+
+For the account this project deploys to, `btcwitness11`, that is:
 
 ```
-0xbBBbbBbb3E51c7666AC600000000000000000000
+0xBbbBbBBb3E51C7666aC602100000000000000000
 ```
 
 Send BTC into exSat EVM by transferring from `btc.xsat` to `evm.xsat` with that address in the

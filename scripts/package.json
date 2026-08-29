@@ -4,7 +4,8 @@
   "license": "MIT",
   "scripts": {
     "prove_fact": "tsx prove_fact.ts",
-    "demo": "tsx demo.ts"
+    "demo": "tsx demo.ts",
+    "reserved-address": "node reserved-address.mjs"
   },
   "dependencies": {
     "@gluwa/cc-next-query-builder": "^0.8.0",

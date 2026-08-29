@@ -3,7 +3,7 @@
 #include <eosio/crypto.hpp>
 
 // Bitcoin Witness — native relay contract (deployed on exSat's Antelope
-// native layer, account name `btcwitness`).
+// native layer, account name `btcwitness11`).
 //
 // Reads a single Bitcoin UTXO fact directly from exSat's own `utxomng.xsat`
 // table and relays it into an EVM transaction on exSat's EVM layer, whose
