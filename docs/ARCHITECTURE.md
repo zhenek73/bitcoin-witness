@@ -35,8 +35,17 @@
    `contracts/asc/BitcoinFactVerifier.sol` calls the BlockProver precompile to prove the payload
    genuinely occurred at that height on that chain, then decodes it and authenticates the fact
    before recording it: correct transaction recipient, correct emitting contract, correct event
-   signature, successful receipt status. Every one of those checks reads from inside the attested
-   bytes, so a caller chooses only *which* proven transaction to submit — never what it says.
+   signature, **correct relayer**, successful receipt status. Every one of those checks reads from
+   inside the attested bytes, so a caller chooses only *which* proven transaction to submit —
+   never what it says.
+
+   The relayer check is the one that carries the trust. `receiveUtxoFact` is callable by anyone
+   on exSat EVM, so "this event was emitted by our contract in a successful, attested
+   transaction" is *not* the same statement as "this is a real Bitcoin fact". Attestation proves
+   **occurrence**; the indexed relayer topic proves **authorship** — that the fact came through
+   `btcwitness`, the only code path that ever reads `utxomng.xsat`. Without that check the
+   pipeline proves nothing at all; see `contracts/asc/test_verifier.py`, which fails loudly if it
+   is removed.
 
 ## Why this needs no one's permission
 
@@ -78,7 +87,7 @@ with one fact type, extending it to richer facts is incremental, not architectur
 | EVM receiver contract (`contracts/evm`) | v1 written; calldata layout verified end-to-end against a real compiled+deployed instance (`contracts/evm/test_receiver.py`) |
 | Creditcoin devnet + exSat registration (`devnet/`) | **working** — exSat registered as source chain (chain_key 7, chainId 7200, encoding V1), confirmed via the ChainInfo precompile |
 | Attestcoin attestor against exSat | **working** — attesting live exSat mainnet blocks; attestation for height 59225940 finalized on Creditcoin, header hash matches exSat's own RPC exactly |
-| Creditcoin verification contract (`contracts/asc`) | v1 written; decoding + authentication covered by 9 tests against real V1-format payloads, incl. 5 negative paths (`contracts/asc/test_verifier.py`) |
+| Creditcoin verification contract (`contracts/asc`) | v1 written; decoding + authentication covered by 12 tests against real V1-format payloads, incl. 7 negative paths and 3 explicit forgery attempts (`contracts/asc/test_verifier.py`) |
 | Proof generation + submission script (`scripts/prove_fact.ts`) | v1 written, typechecks; not yet run against a live network |
 
 ## How exSat relates to EOS
@@ -111,23 +120,69 @@ inline action — not a bridge, not a cross-chain message.
 Not to be confused with **EOS EVM** (`eosio.evm`, chain id 17777), a separate and now-defunct EVM
 on the same EOS mainnet. Different chain id, unrelated to exSat.
 
-## Data source: exSat mainnet
+## Data source: exSat mainnet — real, but frozen
 
-Bitcoin data is read from exSat's **mainnet**, where the UTXO index is live and current. Verified
-directly against `https://rpc-sg.exsat.network` on 2026-08-26:
+Bitcoin data is read from exSat's **mainnet** index, `utxomng.xsat`, on EOS mainnet. The data is
+real: **166,186,512 UTXOs**, block headers carrying genuine proof-of-work, chaining correctly
+parent-to-child, submitted by real mining pools (`f2pool.sat`).
 
-- `utxomng.xsat` holds **166,186,512 UTXOs** at Bitcoin height **959,115**
-- block headers carry real proof-of-work (19 leading zeros) and chain correctly parent-to-child
-- blocks are being submitted by real mining pools (e.g. `f2pool.sat`)
+**It has also stopped advancing.** Checked 2026-08-29 against EOS mainnet and against Bitcoin
+itself:
 
-This matters for what the project can honestly claim: the facts it proves are about **real
-Bitcoin**, not a testnet or self-generated fixtures.
+| | |
+|---|---|
+| `utxomng.xsat` head height | **959,115** — the block mined **2026-07-22** |
+| Bitcoin's actual tip that day | **964,612** |
+| lag | **~5,500 blocks ≈ 38 days** |
+| `num_provider_validators` / `synchronizer` | `0` / empty |
+| `blksync.xsat` `blockbuckets` / `block.chunk` | empty — nothing is being submitted |
+
+So the honest description of the data source is: *a real, PoW-verified snapshot of the Bitcoin
+UTXO set as of 2026-07-22, no longer being extended.* It is a frozen archive, not a live feed —
+consistent with exSat's team having redirected the project away from BTC scaling (see
+`docs/stream/DECISIONS.md`).
+
+What this does and does not change:
+
+- **The mechanism is unaffected.** Everything this project builds — reading the index from a
+  contract, relaying into the EVM, attesting, proving on Creditcoin — works identically on a
+  frozen index. Every UTXO proven is still a real Bitcoin output with real proof-of-work behind
+  it. Nothing here is fixtures.
+- **The claim must be dated.** "This UTXO exists and holds N sats" is only defensible as "…as of
+  Bitcoin height 959,115". That is exactly why `BitcoinFactVerifier` stores `sourceHeight` and
+  `provenAt` rather than a bare boolean: a consumer must be able to see how old the statement is.
+- **A live product needs a live index.** Either exSat's synchronizers resume, or someone runs a
+  synchronizer (the role is permissionless — that is the point of exSat's design), or the same
+  relay is pointed at a different Bitcoin index. The pipe does not care which.
+
+Verify it yourself, no exSat endpoint involved:
+
+```bash
+curl -s -X POST https://eos.greymass.com/v1/chain/get_table_rows -d '{"json":true,
+  "code":"utxomng.xsat","scope":"utxomng.xsat","table":"chainstate","limit":1}'
+curl -s https://blockstream.info/api/blocks/tip/height
+```
 
 exSat's own public *testnet* (`chain2`/`evm2`/`scan2.exactsat.io`) was shut down and is not used
 here.
 
-Because these are EOS mainnet accounts, the Bitcoin index does not depend on exSat operating a
-chain of its own — it keeps advancing as long as synchronizers submit blocks, and it inherits
-EOS mainnet's liveness rather than exSat's corporate roadmap.
+Because these are EOS mainnet accounts, the index inherits EOS mainnet's liveness rather than
+exSat's corporate roadmap: the data stays readable and provable for as long as EOS runs, whatever
+happens to exSat as a company. Liveness of *reading* is not the same as liveness of *ingest* —
+the first is guaranteed, the second currently is not.
+
+## txid byte order
+
+Bitcoin has two conventions for the same 32 bytes: the **internal** order used in the protocol
+and in merkle trees, and the **display** order (byte-reversed) shown by explorers and returned by
+most JSON APIs. Confusing them does not error — it silently matches nothing.
+
+The rule here: **`txid` is always exactly the 32 bytes `utxomng.xsat` stores**, unmodified, all
+the way through — the `byutxoid` key derivation, the native contract, the EVM calldata, the event
+topic, and the `bytes32 txid` recorded on Creditcoin. Nothing in this codebase reverses it.
+
+Practical consequence: a consumer comparing a Creditcoin-proven `txid` against a value copied
+from mempool.space or Blockstream must reverse one of the two. `scripts/demo.ts` takes txids in
+the same form the EOS RPC returns them, which is the same form exSat stores.
 
 See `CHANGELOG.md` for current progress, dated.

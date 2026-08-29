@@ -1,5 +1,58 @@
 # Changelog
 
+## 2026-08-29 (12)
+### Fixed — SECURITY: anyone could have proven a fabricated Bitcoin fact
+- `BitcoinFactVerifier` checked the transaction recipient, the emitting contract, the event
+  signature and the receipt status — but never the **relayer**, the indexed topic saying *who*
+  submitted the fact. Since `receiveUtxoFact` is callable by anyone on exSat EVM, any EOA could
+  emit `BitcoinUtxoAttested` with invented numbers, have Attestcoin honestly attest that real
+  transaction, and have it recorded on Creditcoin as a genuine Bitcoin fact. The one check that
+  makes the pipeline mean anything — the `utxomng.xsat` read in `btcwitness` — was bypassable by
+  simply going around it.
+- Fixed with `expectedRelayer` (the reserved EVM address of the native account) compared against
+  `topics[2]`, plus `msg.sender` enforcement in the receiver as defence in depth.
+- Three new tests cover it, including a genuine-and-forged-log-in-one-transaction case. Removing
+  the check makes the suite fail with `expected revert, but the call SUCCEEDED` — verified.
+- The old tests had *encoded* the hole: the happy path passed a zero-address relayer and called
+  it success.
+
+### Fixed — a proven fact is now dated, not just true
+- `BitcoinFactVerifier` stored `(value, bool)`. It now stores `ProvenFact { value, sourceHeight,
+  provenAt, proven }` and exposes `ageOf()`. A proof is a statement about a past height; a
+  consumer deciding whether to lend against a UTXO has to be able to see how old it is.
+
+### Found — exSat's Bitcoin index has stopped advancing
+- `utxomng.xsat` head height is **959,115** — the Bitcoin block mined **2026-07-22**. Bitcoin's
+  actual tip on 2026-08-29 is **964,612**: the index is **~5,500 blocks / 38 days behind**.
+  `num_provider_validators` is 0, `synchronizer` is empty, and `blksync.xsat`'s `blockbuckets`
+  and `block.chunk` are both empty — nothing is being submitted.
+- Earlier entries called 959,115 "актуальная высота". It never was; we read exSat's own numbers
+  and never compared them against Bitcoin. Lesson recorded: *a chain reporting a height is not
+  the same as that height being current — always diff against the source of truth.*
+- What it changes: the data is still real, PoW-verified Bitcoin, and the mechanism is unaffected.
+  What it costs is the word "live" — every claim must be dated to height 959,115. Which is
+  exactly why `sourceHeight` is now stored.
+
+### Fixed — the gas nobody budgeted for
+- `evm.xsat` config: `token_contract: btc.xsat`, `gas_price: 500000`. Gas on exSat EVM is
+  denominated in **BTC**, charged to the relay account's reserved EVM address. ~2.5 sats per
+  relay, but zero balance means the EVM transaction fails while the Antelope transaction still
+  succeeds — no event, no attestation, and nothing pointing at the cause. Documented in
+  `DEPLOY.md` with the address derivation, plus a note on moving the cost to the caller in v2.
+- `relayutxo` now bounds `gas_limit` (50k–1M) instead of passing whatever it is given.
+
+### Changed
+- `scripts/demo.ts` is genuinely end to end: it signs and pushes `relayutxo` via WharfKit, waits
+  for the EVM event, generates proofs, waits for attestation and verifies on Creditcoin. It also
+  prints exSat's index lag against Bitcoin's real tip, so the demo cannot overstate its own data.
+  Typechecks under `--strict`; dry run verified against live chain data.
+- `devnet/attestor-config.yaml`: the private key that was committed here is gone, replaced by
+  `${ATTESTOR_SECRET}`. That key should be considered burned.
+- `docs/ARCHITECTURE.md`: new sections on the frozen index (with a two-command reproduction) and
+  on txid byte order, which was previously unstated and is a silent-failure class of its own.
+- Root `README.md` still described the abandoned forensic-alert idea; rewritten as an index.
+- New: `docs/AUDIT-2026-08-29.md`, `PITCH.md`, `docs/UI-CONCEPT.md`.
+
 ## 2026-08-26 (11)
 ### Added
 - `scripts/demo.ts`: end-to-end walkthrough that proves one real Bitcoin UTXO from exSat's index
