@@ -70,17 +70,48 @@ contract BitcoinFactVerifier {
     /// Our `BitcoinWitnessReceiver` on exSat's EVM layer.
     address public immutable expectedEmitter;
 
+    /// The EVM-mapped ("reserved") address of the native `btcwitness` account —
+    /// the only address whose relayed facts we accept.
+    ///
+    /// This check is what makes the whole pipeline mean anything.
+    /// `receiveUtxoFact` is callable by anyone on exSat EVM, so "this event was
+    /// emitted by our contract, in a successful transaction, and Attestcoin
+    /// proved it happened" is NOT the same statement as "this is a real Bitcoin
+    /// fact". Attestation proves *occurrence*; only the relayer topic proves
+    /// *authorship*, and authorship is what ties the claim back to the one code
+    /// path that actually read `utxomng.xsat`.
+    ///
+    /// Derived from the Antelope account name: 0xbbbbbbbb ‖ name_u64 (8 bytes,
+    /// big-endian) ‖ 8 zero bytes.
+    address public immutable expectedRelayer;
+
     /// keccak256("BitcoinUtxoAttested(bytes32,uint32,uint64,address)")
     bytes32 public constant EVENT_SIGNATURE = 0x8ada6206a51055064d662d325820d3282b8bff502d55098f7182a1d8a64187fe;
 
-    mapping(bytes32 => mapping(uint32 => uint64)) public provenUtxoValue;
-    mapping(bytes32 => mapping(uint32 => bool)) public isProven;
+    /// A proven fact is a statement about a *past* moment, not a live balance.
+    /// `sourceHeight` is the exSat EVM height the proof was anchored at, and
+    /// `provenAt` is when we recorded it. Both are stored, not just emitted,
+    /// because a consumer deciding whether to lend against this UTXO needs to
+    /// know how stale the claim is — and because exSat's Bitcoin index can lag
+    /// Bitcoin itself by an arbitrary amount (it is only as current as its
+    /// synchronizers make it). A UTXO proven unspent at height H may well have
+    /// been spent since; nothing here can say otherwise.
+    struct ProvenFact {
+        uint64 value;        // satoshis
+        uint64 sourceHeight; // exSat EVM block height the proof was anchored at
+        uint64 provenAt;     // Creditcoin block timestamp when recorded
+        bool proven;
+    }
+
+    mapping(bytes32 => mapping(uint32 => ProvenFact)) public facts;
 
     event BitcoinFactProven(bytes32 indexed txid, uint32 index, uint64 value, uint64 height);
 
-    constructor(uint64 _exsatChainKey, address _expectedEmitter) {
+    constructor(uint64 _exsatChainKey, address _expectedEmitter, address _expectedRelayer) {
+        require(_expectedEmitter != address(0) && _expectedRelayer != address(0), "zero address");
         exsatChainKey = _exsatChainKey;
         expectedEmitter = _expectedEmitter;
+        expectedRelayer = _expectedRelayer;
     }
 
     /// @notice Prove and record a Bitcoin UTXO fact.
@@ -103,8 +134,12 @@ contract BitcoinFactVerifier {
 
         (txid, index, value) = _extractFact(encodedTransaction);
 
-        provenUtxoValue[txid][index] = value;
-        isProven[txid][index] = true;
+        facts[txid][index] = ProvenFact({
+            value: value,
+            sourceHeight: height,
+            provenAt: uint64(block.timestamp),
+            proven: true
+        });
 
         emit BitcoinFactProven(txid, index, value, height);
     }
@@ -136,6 +171,10 @@ contract BitcoinFactVerifier {
             if (log.addr != expectedEmitter) continue;
             // topics: [0] signature, [1] txid (indexed), [2] relayer (indexed)
             if (log.topics.length != 3 || log.topics[0] != EVENT_SIGNATURE) continue;
+            // Authorship. Without this, anyone on exSat EVM can call
+            // receiveUtxoFact directly with invented numbers and have them
+            // proven here as genuine Bitcoin facts.
+            if (log.topics[2] != bytes32(uint256(uint160(expectedRelayer)))) continue;
 
             // Non-indexed args, in declaration order: index (uint32), value (uint64).
             (uint32 idx, uint64 val) = abi.decode(log.data, (uint32, uint64));
@@ -145,9 +184,28 @@ contract BitcoinFactVerifier {
         revert("BitcoinWitness: no matching event in proven transaction");
     }
 
-    /// @return value satoshis; `proven` is false if this pair was never proven,
-    ///         which a zero value alone could not distinguish.
-    function getProvenValue(bytes32 txid, uint32 index) external view returns (uint64 value, bool proven) {
-        return (provenUtxoValue[txid][index], isProven[txid][index]);
+    /// @notice Read a proven fact together with everything needed to judge how
+    ///         much it is still worth trusting.
+    /// @return value satoshis at the time of proof
+    /// @return sourceHeight exSat EVM height the proof was anchored at
+    /// @return provenAt Creditcoin timestamp when it was recorded
+    /// @return proven false if this pair was never proven — which a zero value
+    ///         alone could not distinguish
+    function getProvenValue(bytes32 txid, uint32 index)
+        external
+        view
+        returns (uint64 value, uint64 sourceHeight, uint64 provenAt, bool proven)
+    {
+        ProvenFact memory f = facts[txid][index];
+        return (f.value, f.sourceHeight, f.provenAt, f.proven);
+    }
+
+    /// @notice Seconds since this fact was recorded. Callers that care about
+    ///         freshness (a lender, a reserve auditor) should gate on this
+    ///         rather than on `proven` alone.
+    function ageOf(bytes32 txid, uint32 index) external view returns (uint64) {
+        ProvenFact memory f = facts[txid][index];
+        require(f.proven, "BitcoinWitness: not proven");
+        return uint64(block.timestamp) - f.provenAt;
     }
 }

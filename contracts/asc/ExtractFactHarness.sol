@@ -12,7 +12,9 @@ import "./BitcoinFactVerifier.sol";
 ///      unsafe in production — it is only safe here because the tests supply
 ///      the payload directly instead of trusting a caller.
 contract ExtractFactHarness is BitcoinFactVerifier {
-    constructor(uint64 chainKey, address emitter) BitcoinFactVerifier(chainKey, emitter) {}
+    constructor(uint64 chainKey, address emitter, address relayer)
+        BitcoinFactVerifier(chainKey, emitter, relayer)
+    {}
 
     function extractFact(bytes calldata encodedTransaction)
         external

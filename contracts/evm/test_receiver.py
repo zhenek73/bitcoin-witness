@@ -50,7 +50,9 @@ def main():
     acct = w3.eth.accounts[0]
 
     Contract = w3.eth.contract(abi=abi, bytecode=bytecode)
-    deploy_tx = Contract.constructor().transact({"from": acct})
+    # In production this is btcwitness's reserved EVM address; here the test
+    # account stands in for it, so we can send the relay ourselves.
+    deploy_tx = Contract.constructor(acct).transact({"from": acct})
     addr = w3.eth.get_transaction_receipt(deploy_tx)["contractAddress"]
     contract = w3.eth.contract(address=addr, abi=abi)
 
@@ -71,6 +73,18 @@ def main():
     assert log["args"]["index"] == index
     assert log["args"]["value"] == value
     print("PASS: BitcoinUtxoAttested emitted with exact txid/index/value")
+
+    # Only the relayer may submit facts. This is defence in depth -- the
+    # authoritative check is the relayer topic in BitcoinFactVerifier on
+    # Creditcoin -- but rejecting here keeps forged logs out of the source
+    # chain entirely, which is cheaper than proving them false later.
+    outsider = w3.eth.accounts[1]
+    try:
+        w3.eth.send_transaction({"from": outsider, "to": addr, "data": "0x" + ours.hex()})
+    except Exception:
+        print("PASS: a non-relayer caller is rejected")
+    else:
+        raise AssertionError("a non-relayer caller was ACCEPTED")
 
 
 if __name__ == "__main__":

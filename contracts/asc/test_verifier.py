@@ -31,9 +31,15 @@ INDEX = 7
 VALUE = 1797928002
 
 
+def topic_for(address: str) -> bytes:
+    """An indexed address argument, as it appears in a log topic."""
+    return bytes(12) + bytes.fromhex(address[2:])
+
+
 def build_payload(
     to: str,
     log_addr: str,
+    relayer: str = None,
     topics=None,
     status: int = 1,
     index: int = INDEX,
@@ -43,7 +49,7 @@ def build_payload(
 ):
     """Builds an Attestcoin V1 payload the way Gluwa's encoder does."""
     if topics is None:
-        topics = [EVENT_SIG, TXID, bytes(32)]
+        topics = [EVENT_SIG, TXID, topic_for(relayer)]
 
     common = abi_encode(
         ["uint64", "uint64", "address", "bool", "address", "uint256", "bytes"],
@@ -87,30 +93,31 @@ def main():
     acct = w3.eth.accounts[0]
     emitter = w3.eth.accounts[1]  # stands in for BitcoinWitnessReceiver on exSat
     impostor = w3.eth.accounts[2]
+    relayer = w3.eth.accounts[3]  # stands in for btcwitness's reserved EVM address
 
     c = compiled["ExtractFactHarness.sol"]["ExtractFactHarness"]
     Harness = w3.eth.contract(abi=c["abi"], bytecode=c["evm"]["bytecode"]["object"])
-    tx = Harness.constructor(CHAIN_KEY, emitter).transact({"from": acct})
+    tx = Harness.constructor(CHAIN_KEY, emitter, relayer).transact({"from": acct})
     addr = w3.eth.get_transaction_receipt(tx)["contractAddress"]
     harness = w3.eth.contract(address=addr, abi=c["abi"])
 
     call = lambda payload: harness.functions.extractFact(payload).call()
 
     # --- happy path ---
-    txid, index, value = call(build_payload(to=emitter, log_addr=emitter))
+    txid, index, value = call(build_payload(to=emitter, log_addr=emitter, relayer=relayer))
     assert txid == TXID and index == INDEX and value == VALUE, (txid, index, value)
     print(f"  PASS (happy path): decoded {VALUE} sats for txid[{INDEX}] from a real V1 payload")
 
     # --- the event was emitted by some other contract ---
     expect_revert(
-        lambda: call(build_payload(to=emitter, log_addr=impostor)),
+        lambda: call(build_payload(to=emitter, log_addr=impostor, relayer=relayer)),
         "no matching event",
         "event emitted by an impostor contract",
     )
 
     # --- transaction went somewhere other than our receiver ---
     expect_revert(
-        lambda: call(build_payload(to=impostor, log_addr=emitter)),
+        lambda: call(build_payload(to=impostor, log_addr=emitter, relayer=relayer)),
         "wrong tx recipient",
         "transaction sent to a different contract",
     )
@@ -118,7 +125,11 @@ def main():
     # --- a different event from our own contract ---
     expect_revert(
         lambda: call(
-            build_payload(to=emitter, log_addr=emitter, topics=[hashlib.sha256(b"Other").digest(), TXID, bytes(32)])
+            build_payload(
+                to=emitter,
+                log_addr=emitter,
+                topics=[hashlib.sha256(b"Other").digest(), TXID, topic_for(relayer)],
+            )
         ),
         "no matching event",
         "different event from our contract",
@@ -126,7 +137,7 @@ def main():
 
     # --- source transaction reverted ---
     expect_revert(
-        lambda: call(build_payload(to=emitter, log_addr=emitter, status=0)),
+        lambda: call(build_payload(to=emitter, log_addr=emitter, relayer=relayer, status=0)),
         "did not succeed",
         "source transaction reverted",
     )
@@ -138,20 +149,44 @@ def main():
         "our signature but wrong number of topics",
     )
 
+    # --- THE forgery: our contract, our event, but relayed by someone else ---
+    # receiveUtxoFact is callable by anyone on exSat EVM, so this transaction is
+    # entirely real and Attestcoin would attest it happily. What makes it not a
+    # Bitcoin fact is that it never went through btcwitness, which is the only
+    # code path that reads utxomng.xsat. The relayer topic is where that shows.
+    expect_revert(
+        lambda: call(build_payload(to=emitter, log_addr=emitter, relayer=impostor)),
+        "no matching event",
+        "forged fact: right contract and event, wrong relayer",
+    )
+
+    # --- the same forgery with a zero relayer (the shape a naive encoder gives) ---
+    expect_revert(
+        lambda: call(build_payload(to=emitter, log_addr=emitter, topics=[EVENT_SIG, TXID, bytes(32)])),
+        "no matching event",
+        "forged fact: zero-address relayer",
+    )
+
+    # --- a genuine relay must not be shadowed by a forged one in the same tx ---
+    forged = (emitter, [EVENT_SIG, TXID, topic_for(impostor)], abi_encode(["uint32", "uint64"], [INDEX, 999]))
+    _, _, value_g = call(build_payload(to=emitter, log_addr=emitter, relayer=relayer, extra_logs=[forged]))
+    assert value_g == VALUE, f"picked the forged log: {value_g}"
+    print("  PASS (forgery resistance): skipped a forged log and used the genuine one")
+
     # --- our event sits behind unrelated logs from other contracts ---
     noise = (impostor, [hashlib.sha256(b"Noise").digest()], b"")
-    txid2, index2, value2 = call(build_payload(to=emitter, log_addr=emitter, extra_logs=[noise, noise]))
+    txid2, index2, value2 = call(build_payload(to=emitter, log_addr=emitter, relayer=relayer, extra_logs=[noise, noise]))
     assert (txid2, index2, value2) == (TXID, INDEX, VALUE)
     print("  PASS (log scanning): found our event past unrelated logs")
 
     # --- a legacy (type 0) transaction still decodes: chunk positions hold ---
-    txid3, _, value3 = call(build_payload(to=emitter, log_addr=emitter, tx_type=0))
+    txid3, _, value3 = call(build_payload(to=emitter, log_addr=emitter, relayer=relayer, tx_type=0))
     assert txid3 == TXID and value3 == VALUE
     print("  PASS (tx type independence): legacy type-0 payload decoded the same way")
 
     # --- boundary values survive the uint32/uint64 decode ---
     big_index, big_value = 2**32 - 1, 2**64 - 1
-    _, i4, v4 = call(build_payload(to=emitter, log_addr=emitter, index=big_index, value=big_value))
+    _, i4, v4 = call(build_payload(to=emitter, log_addr=emitter, relayer=relayer, index=big_index, value=big_value))
     assert i4 == big_index and v4 == big_value, (i4, v4)
     print("  PASS (boundaries): max uint32 index and max uint64 value decoded intact")
 
