@@ -1,0 +1,309 @@
+{
+  "address": "0xc01Ee7f10EA4aF4673cFff62710E1D7792aBa8f3",
+  "txHash": "0x19f9e96734f2922eb3a70a50845cdfd9295750b9ec161e4bfe8c4e3981dbc060",
+  "exsatChainKey": 7,
+  "expectedEmitter": "0xF381797E6fa3bCeCBc9Ac054D775010A409aA252",
+  "expectedRelayer": "0xBbbBbBBb3E51C7666aC602100000000000000000",
+  "creditcoinRpc": "http://127.0.0.1:9944",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "uint64",
+          "name": "_exsatChainKey",
+          "type": "uint64"
+        },
+        {
+          "internalType": "address",
+          "name": "_expectedEmitter",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_expectedRelayer",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "txid",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint32",
+          "name": "index",
+          "type": "uint32"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint64",
+          "name": "value",
+          "type": "uint64"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint64",
+          "name": "height",
+          "type": "uint64"
+        }
+      ],
+      "name": "BitcoinFactProven",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "BLOCK_PROVER",
+      "outputs": [
+        {
+          "internalType": "contract IBlockProver",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "EVENT_SIGNATURE",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "txid",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint32",
+          "name": "index",
+          "type": "uint32"
+        }
+      ],
+      "name": "ageOf",
+      "outputs": [
+        {
+          "internalType": "uint64",
+          "name": "",
+          "type": "uint64"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "expectedEmitter",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "expectedRelayer",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "exsatChainKey",
+      "outputs": [
+        {
+          "internalType": "uint64",
+          "name": "",
+          "type": "uint64"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint32",
+          "name": "",
+          "type": "uint32"
+        }
+      ],
+      "name": "facts",
+      "outputs": [
+        {
+          "internalType": "uint64",
+          "name": "value",
+          "type": "uint64"
+        },
+        {
+          "internalType": "uint64",
+          "name": "sourceHeight",
+          "type": "uint64"
+        },
+        {
+          "internalType": "uint64",
+          "name": "provenAt",
+          "type": "uint64"
+        },
+        {
+          "internalType": "bool",
+          "name": "proven",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "txid",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint32",
+          "name": "index",
+          "type": "uint32"
+        }
+      ],
+      "name": "getProvenValue",
+      "outputs": [
+        {
+          "internalType": "uint64",
+          "name": "value",
+          "type": "uint64"
+        },
+        {
+          "internalType": "uint64",
+          "name": "sourceHeight",
+          "type": "uint64"
+        },
+        {
+          "internalType": "uint64",
+          "name": "provenAt",
+          "type": "uint64"
+        },
+        {
+          "internalType": "bool",
+          "name": "proven",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint64",
+          "name": "height",
+          "type": "uint64"
+        },
+        {
+          "internalType": "bytes",
+          "name": "encodedTransaction",
+          "type": "bytes"
+        },
+        {
+          "components": [
+            {
+              "internalType": "bytes32",
+              "name": "root",
+              "type": "bytes32"
+            },
+            {
+              "components": [
+                {
+                  "internalType": "bytes32",
+                  "name": "hash",
+                  "type": "bytes32"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "isLeft",
+                  "type": "bool"
+                }
+              ],
+              "internalType": "struct IBlockProver.MerkleProofEntry[]",
+              "name": "siblings",
+              "type": "tuple[]"
+            }
+          ],
+          "internalType": "struct IBlockProver.TransactionMerkleProof",
+          "name": "merkleProof",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "bytes32",
+              "name": "lowerEndpointDigest",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "bytes32[]",
+              "name": "roots",
+              "type": "bytes32[]"
+            }
+          ],
+          "internalType": "struct IBlockProver.ContinuityProof",
+          "name": "continuityProof",
+          "type": "tuple"
+        }
+      ],
+      "name": "proveBitcoinFact",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "txid",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint32",
+          "name": "index",
+          "type": "uint32"
+        },
+        {
+          "internalType": "uint64",
+          "name": "value",
+          "type": "uint64"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ]
+}
