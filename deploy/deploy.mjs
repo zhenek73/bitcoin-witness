@@ -262,7 +262,7 @@ async function preflight(only) {
   if ((!only || only === 'ram') && st.ramFree <= ramNeeded) {
     pending.push(['ram', 'PAYER_KEY']);
   }
-  if ((!only || only === 'code') && !(await isDeployed())) {
+  if ((!only || only === 'code') && (process.argv.includes('--force') || !(await isDeployed()))) {
     pending.push(['code', 'ACTIVE_KEY']);
   }
 

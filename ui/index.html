@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bitcoin Witness — The Witness Trail</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.5/dist/ethers.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #f4f2ec;
+      --bg-2: #ebe7dc;
+      --ink: #1c1a16;
+      --muted: #6e6a60;
+      --line: #d4cfc3;
+      --card: #fffcf6;
+      --amber: #b7791f;
+      --violet: #6b4fd6;
+      --teal: #0d7a76;
+      --red: #c0392b;
+      --ok: #2d6a4f;
+      --shadow: 0 1px 0 rgba(28,26,22,.04);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #12110f;
+        --bg-2: #1b1916;
+        --ink: #efece4;
+        --muted: #9a9588;
+        --line: #2f2c26;
+        --card: #1a1814;
+        --amber: #e0a53a;
+        --violet: #9b86f0;
+        --teal: #3dccc4;
+        --red: #ee6b5e;
+        --ok: #6ee7b7;
+        --shadow: none;
+      }
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.45;
+    }
+    .wrap { max-width: 760px; margin: 0 auto; padding: 28px 20px 80px; }
+    header.top {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 16px; margin-bottom: 22px;
+    }
+    .brand { font-size: 13px; letter-spacing: .14em; font-weight: 600; }
+    .path { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .path b { color: var(--ink); font-weight: 500; }
+    button.icon {
+      border: 1px solid var(--line); background: var(--card); color: var(--ink);
+      width: 36px; height: 36px; border-radius: 8px; cursor: pointer;
+    }
+    button.icon:hover { border-color: var(--muted); }
+    .panel {
+      background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+      padding: 16px; margin-bottom: 18px; box-shadow: var(--shadow);
+    }
+    .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+    label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+    input[type="text"], input[type="number"], input[type="url"] {
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 12.5px; width: 100%;
+      border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+      border-radius: 8px; padding: 9px 10px;
+    }
+    .grow { flex: 1 1 280px; }
+    .vout { flex: 0 0 88px; }
+    button.primary {
+      background: var(--ink); color: var(--bg); border: 0; border-radius: 8px;
+      padding: 10px 14px; font: 500 13px Inter, sans-serif; cursor: pointer;
+      white-space: nowrap; height: 38px;
+    }
+    button.primary:disabled { opacity: .45; cursor: not-allowed; }
+    button.linkish {
+      background: none; border: 0; color: var(--teal); font: 500 12px Inter, sans-serif;
+      cursor: pointer; padding: 0;
+    }
+    .note { font-size: 12px; color: var(--muted); margin-top: 10px; }
+    .settings { display: none; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+    .settings.open { display: block; }
+    .settings .warn {
+      font-size: 12px; color: var(--muted); background: var(--bg-2);
+      border-radius: 8px; padding: 10px 12px; margin-top: 10px;
+    }
+    .trail { margin-top: 8px; }
+    .station { display: grid; grid-template-columns: 28px 1fr; gap: 0 14px; }
+    .rail { position: relative; }
+    .num {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: grid; place-items: center;
+      font: 600 12px Inter, sans-serif; border: 1.5px solid var(--line);
+      background: var(--card); color: var(--muted); position: relative; z-index: 1;
+    }
+    .station.ok .num { border-color: var(--ok); color: var(--ok); }
+    .station.run .num { border-color: currentColor; color: inherit; }
+    .station.err .num { border-color: var(--red); color: var(--red); }
+    .station[data-tone="amber"] { color: var(--amber); }
+    .station[data-tone="violet"] { color: var(--violet); }
+    .station[data-tone="teal"] { color: var(--teal); }
+    .head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+    .name { font-size: 13px; font-weight: 600; letter-spacing: .06em; color: var(--ink); }
+    .status { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .station.ok .status { color: var(--ok); }
+    .station.run .status { color: inherit; }
+    .station.err .status { color: var(--red); }
+    .body { color: var(--ink); font-size: 13.5px; margin: 8px 0 4px; }
+    .body p { margin: 0 0 4px; }
+    .mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12px; }
+    .hash {
+      font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12px;
+      cursor: copy; border-bottom: 1px dashed var(--line);
+    }
+    .src { font-size: 11px; color: var(--muted); }
+    a.vlink {
+      color: inherit; text-decoration: none; border-bottom: 1px solid currentColor;
+      font-size: 12.5px;
+    }
+    .connector {
+      position: relative; min-height: 52px; margin: 2px 0 2px 13px;
+      border-left: 1.5px solid var(--line); padding: 8px 0 8px 28px;
+    }
+    .connector span {
+      font-size: 11px; color: var(--muted); display: block; max-width: 42ch;
+    }
+    .connector.running { border-left-color: currentColor; }
+    .dot {
+      display: none; position: absolute; left: -5px; top: 0;
+      width: 8px; height: 8px; border-radius: 50%; background: currentColor;
+    }
+    .connector.running .dot { display: block; animation: travel 1.15s linear infinite; }
+    @keyframes travel { from { top: 4px; } to { top: calc(100% - 10px); } }
+    .toast {
+      position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+      background: var(--ink); color: var(--bg); font-size: 12px;
+      padding: 8px 12px; border-radius: 8px; opacity: 0; pointer-events: none;
+      transition: opacity .2s;
+    }
+    .toast.show { opacity: 1; }
+    .arch { margin-top: 48px; }
+    .arch h2 { font-size: 13px; letter-spacing: .12em; font-weight: 600; }
+    .boxes { display: flex; flex-direction: column; gap: 0; margin-top: 14px; }
+    .box {
+      border: 1px solid var(--line); background: var(--card); border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .box strong { display: block; font-size: 13px; }
+    .box em { font-style: normal; font-size: 12px; color: var(--muted); }
+    .arrow { font-size: 11px; color: var(--muted); padding: 8px 8px 8px 18px; }
+    .json {
+      display: none; margin-top: 8px; background: var(--bg-2); border-radius: 8px;
+      padding: 10px; overflow: auto; max-height: 240px;
+      font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 11px;
+      white-space: pre-wrap; word-break: break-all;
+    }
+    .json.open { display: block; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <div>
+        <div class="brand">BITCOIN WITNESS</div>
+        <div class="path">exSat ▸ Attestcoin ▸ Creditcoin</div>
+      </div>
+      <button class="icon" id="gear" title="Creditcoin endpoints" aria-label="Settings">⚙</button>
+    </header>
+
+    <div class="panel">
+      <div class="row">
+        <div class="grow">
+          <label for="txid">txid</label>
+          <input id="txid" type="text" spellcheck="false" autocomplete="off" />
+        </div>
+        <div class="vout">
+          <label for="vout">vout</label>
+          <input id="vout" type="number" min="0" step="1" />
+        </div>
+        <button class="primary" id="prove">Prove this UTXO</button>
+      </div>
+      <p class="note" id="modeNote">Read-only replay from live public RPCs. Nothing on this page is pre-recorded.</p>
+      <div class="settings" id="settings">
+        <div class="row">
+          <div class="grow">
+            <label for="ccRpc">Creditcoin RPC <span class="src">?ccRpc= · localStorage</span></label>
+            <input id="ccRpc" type="url" />
+          </div>
+          <div class="grow">
+            <label for="proofApi">Proof API <span class="src">?proofApi= · localStorage</span></label>
+            <input id="proofApi" type="url" />
+          </div>
+        </div>
+        <p class="warn">
+          Creditcoin and the proof-gen API are a <b>local devnet on this machine</b>, not a public network.
+          <code class="mono">127.0.0.1</code> only works from a browser on the same host.
+          If you open this page from Vercel/Netlify/GitHub Pages, tunnel those two ports
+          (<span class="mono">cloudflared</span> / <span class="mono">ngrok</span>) and paste the public URLs here.
+          EOS and exSat endpoints are public and need no tunnel.
+        </p>
+      </div>
+    </div>
+
+    <div class="trail" id="trail"></div>
+
+    <section class="arch">
+      <h2>THE PIPE</h2>
+      <div class="boxes">
+        <div class="box"><strong>① Bitcoin UTXO</strong><em>the fact — value, unspent — as of the indexed height</em></div>
+        <div class="arrow">↓ multi_index read · same chain · no permission needed</div>
+        <div class="box"><strong>② exSat native / EOS mainnet</strong><em>utxomng.xsat → btcwitness11::relayutxo</em></div>
+        <div class="arrow">↓ inline action · same chain · not a bridge</div>
+        <div class="box"><strong>③ exSat EVM · chain 7200</strong><em>BitcoinWitnessReceiver emits BitcoinUtxoAttested</em></div>
+        <div class="arrow">↓ attestation · BLS quorum</div>
+        <div class="box"><strong>④ Attestcoin</strong><em>header hash of an exSat block, quorum-signed</em></div>
+        <div class="arrow">↓ BlockProver precompile · on-chain verification</div>
+        <div class="box"><strong>⑤ Creditcoin</strong><em>BitcoinFactVerifier records the fact — only if the relayer topic is btcwitness</em></div>
+      </div>
+    </section>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const CFG = {
+      EOS_RPCS: ["https://eos.greymass.com", "https://eos.api.eosnation.io"],
+      EOS_EXPLORER: "https://bloks.io",
+      HYPERION: "https://eos.hyperion.eosrio.io",
+      UTXOMNG: "utxomng.xsat",
+      BTCWITNESS: "btcwitness11",
+      RELAYER: "0xBbbBbBBb3E51C7666aC602100000000000000000",
+      EXSAT_RPC: "https://evm.exsat.network",
+      EXSAT_EXPLORER: "https://scan.exsat.network",
+      EXSAT_CHAIN_ID: 7200,
+      EXSAT_CHAIN_KEY: 7,
+      RECEIVER: "0xF381797E6fa3bCeCBc9Ac054D775010A409aA252",
+      RECEIVER_DEPLOY_TX: "0xc2e8388fee4845797598ec56d60cfc6e5746c7ee171df863a65c42d4206e24f8",
+      NATIVE_DEPLOY_TX: "18f6fc136895398a06fe0babaad81913653765421386e143081a2792084f6086",
+      VERIFIER: "0xc01Ee7f10EA4aF4673cFff62710E1D7792aBa8f3",
+      CHAIN_INFO: "0x0000000000000000000000000000000000000fd3",
+      ATTESTOR: "5CB4odFpzLL7MFFcr12VX18YgEvJegpXkdvkeYun77hUKtc5",
+      ATTESTATION_HEIGHT: 59225940,
+      ATTESTATION_DIGEST: "0x9768a07f934e82a9fdff2d6c8a4af00ce756d826daa11d3c0a57386897035f79",
+      KNOWN: {
+        txid: "e1afd89295b68bc5247fe0ca2885dd4b8818d7ce430faa615067d7bab8640156",
+        index: 0
+      },
+      RECEIVER_ABI: [
+        "event BitcoinUtxoAttested(bytes32 indexed txid, uint32 index, uint64 value, address indexed relayer_)",
+        "function relayer() view returns (address)"
+      ],
+      VERIFIER_ABI: [
+        "function getProvenValue(bytes32 txid, uint32 index) view returns (uint64 value, uint64 sourceHeight, uint64 provenAt, bool proven)",
+        "function expectedRelayer() view returns (address)",
+        "function expectedEmitter() view returns (address)",
+        "function exsatChainKey() view returns (uint64)",
+        "event BitcoinFactProven(bytes32 indexed txid, uint32 index, uint64 value, uint64 height)"
+      ],
+      CHAININFO_ABI: [
+        "function get_latest_attestation_height_and_hash(uint64 chainKey) view returns (tuple(uint64 height, bytes32 hash, bool isAttestation, bool exists))",
+        "function get_attestation_height_for_digest(uint64 chainKey, bytes32 digest) view returns (tuple(uint64 height, bool exists))",
+        "function is_height_attested(uint64 chainKey, uint64 targetHeight) view returns (bool)",
+        "function get_chain_by_key(uint64 chainKey) view returns (tuple(tuple(uint64 chainKey, uint64 chainId, bytes chainName, uint8 chainEncoding) info, bool exists))"
+      ]
+    };
+
+    const HOPS = [
+      { id: "btc", n: "①", name: "BITCOIN", tone: "amber",
+        next: "multi_index read · same chain · no permission needed" },
+      { id: "eos", n: "②", name: "exSAT NATIVE (EOS mainnet)", tone: "violet",
+        next: "inline action · same chain · not a bridge" },
+      { id: "evm", n: "③", name: "exSAT EVM (chain 7200)", tone: "violet",
+        next: "attestation · BLS quorum" },
+      { id: "atc", n: "④", name: "ATTESTCOIN", tone: "teal",
+        next: "BlockProver precompile · on-chain verification" },
+      { id: "cc", n: "⑤", name: "CREDITCOIN", tone: "teal" }
+    ];
+
+    const $ = (id) => document.getElementById(id);
+    const params = new URLSearchParams(location.search);
+
+    function loadSetting(key, fallback) {
+      return params.get(key) || localStorage.getItem("bw." + key) || fallback;
+    }
+    function persistSetting(key, value) {
+      localStorage.setItem("bw." + key, value);
+    }
+
+    $("ccRpc").value = loadSetting("ccRpc", "http://127.0.0.1:9944");
+    $("proofApi").value = loadSetting("proofApi", "http://127.0.0.1:3100");
+    $("txid").value = params.get("txid") || CFG.KNOWN.txid;
+    $("vout").value = params.get("index") || CFG.KNOWN.index;
+
+    $("ccRpc").addEventListener("change", () => persistSetting("ccRpc", $("ccRpc").value.trim()));
+    $("proofApi").addEventListener("change", () => persistSetting("proofApi", $("proofApi").value.trim()));
+    $("gear").onclick = () => $("settings").classList.toggle("open");
+
+    function toast(msg) {
+      const el = $("toast");
+      el.textContent = msg;
+      el.classList.add("show");
+      setTimeout(() => el.classList.remove("show"), 1400);
+    }
+
+    function mid(hex, keep = 6) {
+      const s = String(hex || "");
+      if (s.length <= keep * 2 + 1) return s;
+      return s.slice(0, keep) + "…" + s.slice(-keep);
+    }
+    function hashEl(value) {
+      const span = document.createElement("span");
+      span.className = "hash";
+      span.title = "click to copy";
+      span.textContent = mid(value);
+      span.onclick = () => { navigator.clipboard.writeText(value); toast("copied"); };
+      return span;
+    }
+    function fmtSats(v) {
+      const n = BigInt(v);
+      return `${n.toLocaleString("en-US")} sats (${Number(n) / 1e8} BTC)`;
+    }
+    function fmtN(n) { return Number(n).toLocaleString("en-US"); }
+
+    async function sha256Hex(bytes) {
+      const buf = await crypto.subtle.digest("SHA-256", bytes);
+      return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+    }
+    function hexToBytes(hex) {
+      const h = hex.replace(/^0x/, "");
+      const out = new Uint8Array(h.length / 2);
+      for (let i = 0; i < out.length; i++) out[i] = parseInt(h.slice(i * 2, i * 2 + 2), 16);
+      return out;
+    }
+    async function computeUtxoId(txid, index) {
+      const raw = new Uint8Array(36);
+      raw.set(hexToBytes(txid), 0);
+      const view = new DataView(raw.buffer);
+      view.setUint32(32, Number(index), true);
+      return sha256Hex(raw);
+    }
+
+    async function fetchTimeout(url, opts, ms, label) {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), ms);
+      try {
+        return await fetch(url, { ...opts, signal: ctrl.signal });
+      } catch (e) {
+        if (e.name === "AbortError") throw new Error((label || url) + " timed out");
+        throw e;
+      } finally { clearTimeout(t); }
+    }
+
+    async function ccPing(url) {
+      const res = await fetchTimeout(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_chainId", params: [] })
+      }, 3500, "Creditcoin RPC");
+      return res.ok;
+    }
+
+    let eosRpc = CFG.EOS_RPCS[0];
+    async function eosPost(path, body) {
+      let last;
+      for (const base of [eosRpc, ...CFG.EOS_RPCS.filter((u) => u !== eosRpc)]) {
+        try {
+          const res = await fetch(base + path, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body)
+          });
+          if (!res.ok) throw new Error(base + " " + res.status);
+          eosRpc = base;
+          return res.json();
+        } catch (e) { last = e; }
+      }
+      throw last;
+    }
+
+    function renderTrail() {
+      const root = $("trail");
+      root.innerHTML = "";
+      HOPS.forEach((h, i) => {
+        const st = document.createElement("div");
+        st.className = "station";
+        st.dataset.tone = h.tone;
+        st.id = "st-" + h.id;
+        st.innerHTML = `
+          <div class="rail"><div class="num">${h.n}</div></div>
+          <div>
+            <div class="head">
+              <div class="name">${h.name}</div>
+              <div class="status" id="st-${h.id}-status">pending</div>
+            </div>
+            <div class="body" id="st-${h.id}-body"><p class="src">waiting</p></div>
+          </div>`;
+        root.appendChild(st);
+        if (h.next) {
+          const c = document.createElement("div");
+          c.className = "connector";
+          c.dataset.tone = h.tone;
+          c.id = "cn-" + h.id;
+          c.innerHTML = `<i class="dot"></i><span>${h.next}</span>`;
+          root.appendChild(c);
+        }
+      });
+    }
+    renderTrail();
+
+    function setStation(id, state, elapsedMs) {
+      const el = $("st-" + id);
+      el.classList.remove("ok", "run", "err");
+      const status = $("st-" + id + "-status");
+      if (state === "running") {
+        el.classList.add("run");
+        status.textContent = elapsedMs != null ? (elapsedMs / 1000).toFixed(1) + " s" : "running";
+      } else if (state === "ok") {
+        el.classList.add("ok");
+        status.textContent = "✓ " + (elapsedMs / 1000).toFixed(1) + " s";
+      } else if (state === "err") {
+        el.classList.add("err");
+        status.textContent = elapsedMs != null ? "✗ " + (elapsedMs / 1000).toFixed(1) + " s" : "✗";
+      } else {
+        status.textContent = "pending";
+      }
+    }
+    function setBody(id, nodes) {
+      const body = $("st-" + id + "-body");
+      body.innerHTML = "";
+      nodes.forEach((n) => body.appendChild(n));
+    }
+    function p(html) {
+      const el = document.createElement("p");
+      el.innerHTML = html;
+      return el;
+    }
+    function line(parts) {
+      const el = document.createElement("p");
+      parts.forEach((part) => {
+        if (typeof part === "string") el.appendChild(document.createTextNode(part));
+        else el.appendChild(part);
+      });
+      return el;
+    }
+    function vlink(href, text) {
+      const a = document.createElement("a");
+      a.className = "vlink";
+      a.href = href;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.textContent = text;
+      return a;
+    }
+    function src(text) {
+      const el = document.createElement("p");
+      el.className = "src";
+      el.textContent = text;
+      return el;
+    }
+
+    let runToken = 0;
+
+    async function runTrail(txid, index, { historical }) {
+      const token = ++runToken;
+      const clean = txid.replace(/^0x/, "").toLowerCase();
+      $("prove").disabled = true;
+      $("modeNote").textContent = historical
+        ? "Historical replay · every number below is being read now from a public endpoint."
+        : "Live prove · reads only. The relay key never enters this page.";
+      renderTrail();
+
+      const ctx = { txid: clean, index: Number(index), event: null, utxo: null, state: null };
+
+      await stepBtc(ctx, token);
+      if (token !== runToken) return;
+      if (!ctx.utxo) { $("prove").disabled = false; return; }
+
+      await stepEos(ctx, token);
+      if (token !== runToken) return;
+      await stepEvm(ctx, token);
+      if (token !== runToken) return;
+      await stepAtc(ctx, token);
+      if (token !== runToken) return;
+      await stepCc(ctx, token);
+      $("prove").disabled = false;
+    }
+
+    function timer(id, hopId) {
+      const t0 = performance.now();
+      const cn = hopId ? $("cn-" + hopId) : null;
+      if (cn) cn.classList.add("running");
+      setStation(id, "running", 0);
+      const iv = setInterval(() => setStation(id, "running", performance.now() - t0), 100);
+      return {
+        ms: () => performance.now() - t0,
+        stop(state) {
+          clearInterval(iv);
+          if (cn) cn.classList.remove("running");
+          setStation(id, state, performance.now() - t0);
+        }
+      };
+    }
+
+    async function stepBtc(ctx, token) {
+      const t = timer("btc");
+      try {
+        const [stateRes, tipRes] = await Promise.all([
+          eosPost("/v1/chain/get_table_rows", {
+            json: true, code: CFG.UTXOMNG, scope: CFG.UTXOMNG, table: "chainstate", limit: 1
+          }),
+          fetch("https://blockstream.info/api/blocks/tip/height").then((r) => r.ok ? r.text() : null).catch(() => null)
+        ]);
+        ctx.state = stateRes.rows?.[0];
+        const height = Number(ctx.state?.head_height ?? 0);
+        const count = Number(ctx.state?.num_utxos ?? 0);
+        const utxoId = await computeUtxoId(ctx.txid, ctx.index);
+        const { rows } = await eosPost("/v1/chain/get_table_rows", {
+          json: true, code: CFG.UTXOMNG, scope: CFG.UTXOMNG, table: "utxos",
+          index_position: 3, key_type: "sha256",
+          lower_bound: utxoId, upper_bound: utxoId, limit: 1
+        });
+        if (token !== runToken) return;
+        if (!rows?.length) {
+          t.stop("err");
+          const btn = document.createElement("button");
+          btn.className = "linkish";
+          btn.textContent = "try a known-good UTXO";
+          btn.onclick = () => {
+            $("txid").value = CFG.KNOWN.txid;
+            $("vout").value = CFG.KNOWN.index;
+            runTrail(CFG.KNOWN.txid, CFG.KNOWN.index, { historical: true });
+          };
+          setBody("btc", [
+            p(`not in the set at height ${fmtN(height)}`),
+            p(`${fmtN(count)} UTXOs indexed · spent, never existed, or above this height.`),
+            src(`GET table utxos @ ${eosRpc}`),
+            btn
+          ]);
+          return;
+        }
+        ctx.utxo = rows[0];
+        ctx.utxoId = utxoId;
+        t.stop("ok");
+        const tip = tipRes ? Number(tipRes) : null;
+        const lag = tip != null ? tip - height : null;
+        setBody("btc", [
+          p(`indexed to height ${fmtN(height)} · ${fmtN(count)} UTXOs`),
+          p(`value ${fmtSats(ctx.utxo.value)}`),
+          line(["utxo_id ", hashEl(utxoId)]),
+          line([
+            vlink("https://mempool.space/tx/" + ctx.txid, "↗ verify on mempool.space"),
+            document.createTextNode("  ·  "),
+            vlink(CFG.EOS_EXPLORER + "/account/" + CFG.UTXOMNG, "↗ utxomng.xsat on bloks.io")
+          ]),
+          src(`POST ${eosRpc}/v1/chain/get_table_rows  ·  index byutxoid (pos 3)${lag != null ? "  ·  Bitcoin tip " + fmtN(tip) + " (" + fmtN(lag) + " blocks ahead of the index)" : ""}`)
+        ]);
+      } catch (e) {
+        t.stop("err");
+        setBody("btc", [p(String(e.message || e)), src("EOS RPC unreachable")]);
+      }
+    }
+
+    async function stepEos(ctx, token) {
+      const t = timer("eos", "btc");
+      try {
+        const url = `${CFG.HYPERION}/v2/history/get_actions?account=${CFG.BTCWITNESS}&filter=${CFG.BTCWITNESS}:relayutxo&limit=50`;
+        let actions = [];
+        try {
+          const res = await fetch(url);
+          if (res.ok) {
+            const data = await res.json();
+            actions = (data.actions || []).filter((a) => {
+              const d = a.act?.data || {};
+              const tx = String(d.txid || "").replace(/^0x/, "").toLowerCase();
+              return tx === ctx.txid && Number(d.index) === ctx.index;
+            });
+          }
+        } catch (_) { /* history is optional; EVM logs are the source of truth for hop 3 */ }
+
+        if (token !== runToken) return;
+        if (actions.length) {
+          const a = actions[0];
+          ctx.antelopeTx = a.trx_id;
+          t.stop("ok");
+          setBody("eos", [
+            p("btcwitness::relayutxo → inline action → evm.xsat"),
+            line(["antelope tx ", hashEl(a.trx_id)]),
+            vlink(CFG.EOS_EXPLORER + "/transaction/" + a.trx_id, "↗ verify on bloks.io"),
+            src(`GET ${CFG.HYPERION}/v2/history/get_actions`)
+          ]);
+          return;
+        }
+        t.stop("err");
+        setBody("eos", [
+          p("not yet relayed — ask the operator to run the relay."),
+          p("The native contract is deployed. This page will never hold btcwitness11's key."),
+          line(["setcode tx ", hashEl(CFG.NATIVE_DEPLOY_TX)]),
+          vlink(CFG.EOS_EXPLORER + "/transaction/" + CFG.NATIVE_DEPLOY_TX, "↗ verify deploy on bloks.io"),
+          src(`account ${CFG.BTCWITNESS} · filter relayutxo · ${CFG.HYPERION}`)
+        ]);
+      } catch (e) {
+        t.stop("err");
+        setBody("eos", [p(String(e.message || e))]);
+      }
+    }
+
+    async function stepEvm(ctx, token) {
+      const t = timer("evm", "eos");
+      try {
+        const provider = new ethers.JsonRpcProvider(CFG.EXSAT_RPC, CFG.EXSAT_CHAIN_ID, { staticNetwork: true });
+        const receiver = new ethers.Contract(CFG.RECEIVER, CFG.RECEIVER_ABI, provider);
+        const onchainRelayer = await receiver.relayer();
+        const topicTxid = "0x" + ctx.txid.padStart(64, "0");
+        let logs = [];
+        try {
+          logs = await receiver.queryFilter(receiver.filters.BitcoinUtxoAttested(topicTxid), 0, "latest");
+        } catch (_) {
+          const head = await provider.getBlockNumber();
+          logs = await receiver.queryFilter(receiver.filters.BitcoinUtxoAttested(topicTxid), Math.max(0, head - 50_000), head);
+        }
+        if (token !== runToken) return;
+        if (!logs.length) {
+          t.stop("err");
+          setBody("evm", [
+            p("no BitcoinUtxoAttested for this UTXO."),
+            line(["receiver ", hashEl(CFG.RECEIVER)]),
+            line(["relayer() ", hashEl(onchainRelayer)]),
+            vlink(CFG.EXSAT_EXPLORER + "/address/" + CFG.RECEIVER, "↗ verify on scan.exsat.network"),
+            src(`${CFG.EXSAT_RPC}  ·  chainId ${CFG.EXSAT_CHAIN_ID}`)
+          ]);
+          return;
+        }
+        const log = logs[logs.length - 1];
+        ctx.event = log;
+        const relayerTopic = ethers.hexlify(log.topics[2]);
+        const relayerAddr = ethers.getAddress("0x" + relayerTopic.slice(26));
+        t.stop("ok");
+        setBody("evm", [
+          p(`BitcoinUtxoAttested emitted · block ${fmtN(log.blockNumber)}`),
+          line(["topics[1]=txid ", hashEl(log.topics[1])]),
+          line(["topics[2]=relayer ", hashEl(relayerAddr)]),
+          line(["evm tx ", hashEl(log.transactionHash)]),
+          vlink(CFG.EXSAT_EXPLORER + "/tx/" + log.transactionHash, "↗ verify on scan.exsat.network"),
+          src(`${CFG.EXSAT_RPC}  ·  receiver ${CFG.RECEIVER}`)
+        ]);
+        ctx.relayerOk = relayerAddr.toLowerCase() === CFG.RELAYER.toLowerCase();
+      } catch (e) {
+        t.stop("err");
+        setBody("evm", [p(String(e.message || e)), src(CFG.EXSAT_RPC)]);
+      }
+    }
+
+    async function stepAtc(ctx, token) {
+      const t = timer("atc", "evm");
+      const need = ctx.event ? Number(ctx.event.blockNumber) : CFG.ATTESTATION_HEIGHT;
+      try {
+        const exsat = new ethers.JsonRpcProvider(CFG.EXSAT_RPC, CFG.EXSAT_CHAIN_ID, { staticNetwork: true });
+        const header = await exsat.getBlock(CFG.ATTESTATION_HEIGHT);
+        const headerOk = header && header.hash.toLowerCase() === "0xe47664ed9713c33aeb7397b002a8ad021e48ce4ec625368846aa6b8621953ff6";
+
+        let attested = null;
+        let digestHeight = null;
+        let ccErr = null;
+        const ccUrl = $("ccRpc").value.trim();
+        try {
+          await ccPing(ccUrl);
+          const cc = new ethers.JsonRpcProvider(ccUrl, 42, { staticNetwork: true });
+          const info = new ethers.Contract(CFG.CHAIN_INFO, CFG.CHAININFO_ABI, cc);
+          attested = await info.get_latest_attestation_height_and_hash(CFG.EXSAT_CHAIN_KEY);
+          digestHeight = await info.get_attestation_height_for_digest(CFG.EXSAT_CHAIN_KEY, CFG.ATTESTATION_DIGEST);
+        } catch (e) {
+          ccErr = e;
+        }
+        if (token !== runToken) return;
+
+        if (ccErr) {
+          t.stop("err");
+          setBody("atc", [
+            p(`attested height unknown · need ${fmtN(need)}`),
+            p("Creditcoin RPC is not reachable from this browser."),
+            line(["digest ", hashEl(CFG.ATTESTATION_DIGEST)]),
+            line([
+              `header ${CFG.ATTESTATION_HEIGHT} `,
+              hashEl(header?.hash || "—"),
+              document.createTextNode(headerOk ? "  matches exSat RPC  ✓" : "  mismatch")
+            ]),
+            vlink(CFG.EXSAT_EXPLORER + "/block/" + CFG.ATTESTATION_HEIGHT, "↗ verify header on scan.exsat.network"),
+            src(`exSat ${CFG.EXSAT_RPC}  ·  Creditcoin ${$("ccRpc").value.trim()} — open ⚙ and paste a tunnel if this page is hosted`)
+          ]);
+          return;
+        }
+
+        const latest = Number(attested.height);
+        const behind = Math.max(0, need - latest);
+        const digestExists = Boolean(digestHeight.exists);
+        if (behind > 0) {
+          t.stop("err");
+          setBody("atc", [
+            p(`attested height ${fmtN(latest)} · need ${fmtN(need)} · ~${fmtN(behind)} blocks behind`),
+            line(["quorum 1/1 · digest ", hashEl(CFG.ATTESTATION_DIGEST), document.createTextNode(digestExists ? "  on-chain" : "")]),
+            line([`header hash matches exSat RPC  ${headerOk ? "✓" : "✗"}`]),
+            vlink(CFG.EXSAT_EXPLORER + "/block/" + CFG.ATTESTATION_HEIGHT, "↗ verify header on scan.exsat.network"),
+            src(`ChainInfo 0x…0fd3  ·  chain_key ${CFG.EXSAT_CHAIN_KEY} (not chainId ${CFG.EXSAT_CHAIN_ID})  ·  ${$("ccRpc").value.trim()}`)
+          ]);
+          return;
+        }
+        t.stop("ok");
+        setBody("atc", [
+          line(["quorum 1/1 · digest ", hashEl(CFG.ATTESTATION_DIGEST)]),
+          p(`attested height ${fmtN(latest)} · attestor ${CFG.ATTESTOR.slice(0, 8)}…`),
+          line([`header hash matches exSat RPC  ${headerOk ? "✓" : "✗"} `]),
+          vlink(CFG.EXSAT_EXPLORER + "/block/" + CFG.ATTESTATION_HEIGHT, "↗ verify header on scan.exsat.network"),
+          src(`ChainInfo precompile  ·  ${$("ccRpc").value.trim()}`)
+        ]);
+      } catch (e) {
+        t.stop("err");
+        setBody("atc", [p(String(e.shortMessage || e.message || e))]);
+      }
+    }
+
+    async function stepCc(ctx, token) {
+      const t = timer("cc", "atc");
+      try {
+        const ccUrl = $("ccRpc").value.trim();
+        await ccPing(ccUrl);
+        const cc = new ethers.JsonRpcProvider(ccUrl, 42, { staticNetwork: true });
+        const verifier = new ethers.Contract(CFG.VERIFIER, CFG.VERIFIER_ABI, cc);
+        const topicTxid = "0x" + ctx.txid.padStart(64, "0");
+        const fact = await verifier.getProvenValue(topicTxid, ctx.index);
+        const expectedRelayer = await verifier.expectedRelayer();
+        if (token !== runToken) return;
+
+        if (ctx.event && ctx.relayerOk === false) {
+          t.stop("err");
+          setBody("cc", [
+            p("rejected: relayer is not btcwitness"),
+            line(["expected ", hashEl(expectedRelayer)]),
+            src(`${$("ccRpc").value.trim()}  ·  ${CFG.VERIFIER}`)
+          ]);
+          return;
+        }
+        if (!fact.proven) {
+          t.stop("err");
+          const pre = document.createElement("pre");
+          pre.className = "json open";
+          pre.textContent = JSON.stringify({
+            getProvenValue: {
+              value: fact.value.toString(),
+              sourceHeight: fact.sourceHeight.toString(),
+              provenAt: fact.provenAt.toString(),
+              proven: fact.proven
+            },
+            expectedRelayer,
+            verifier: CFG.VERIFIER
+          }, null, 2);
+          setBody("cc", [
+            p("not proven on Creditcoin — no BitcoinFactProven for this UTXO."),
+            p("This is the honest result until an operator relays and the verifier is called."),
+            pre,
+            src(`getProvenValue  ·  ${$("ccRpc").value.trim()}  ·  local devnet, no public explorer`)
+          ]);
+          return;
+        }
+        t.stop("ok");
+        const pre = document.createElement("pre");
+        pre.className = "json open";
+        pre.textContent = JSON.stringify({
+          BitcoinFactProven: {
+            txid: ctx.txid,
+            index: ctx.index,
+            value: fact.value.toString(),
+            height: fact.sourceHeight.toString(),
+            provenAt: new Date(Number(fact.provenAt) * 1000).toISOString()
+          }
+        }, null, 2);
+        const toggle = document.createElement("button");
+        toggle.className = "linkish";
+        toggle.textContent = "↗ raw receipt JSON (local devnet, no public explorer)";
+        toggle.onclick = () => pre.classList.toggle("open");
+        setBody("cc", [
+          p(`BitcoinFactProven(${ctx.txid.slice(0, 8)}…, ${ctx.index}, ${fact.value}, ${fact.sourceHeight})`),
+          p(`value ${fmtSats(fact.value)} · source height ${fmtN(fact.sourceHeight)}`),
+          toggle,
+          pre,
+          src(`getProvenValue  ·  ${CFG.VERIFIER}  ·  ${$("ccRpc").value.trim()}`)
+        ]);
+      } catch (e) {
+        t.stop("err");
+        setBody("cc", [
+          p("Creditcoin verifier unreachable."),
+          p(String(e.shortMessage || e.message || e)),
+          src(`${$("ccRpc").value.trim()} — open ⚙ if you need a tunnel`)
+        ]);
+      }
+    }
+
+    $("prove").onclick = () => {
+      const txid = $("txid").value.trim();
+      const index = $("vout").value.trim() || "0";
+      const historical = txid.replace(/^0x/, "").toLowerCase() === CFG.KNOWN.txid && Number(index) === CFG.KNOWN.index;
+      runTrail(txid, index, { historical });
+    };
+
+    runTrail($("txid").value.trim(), $("vout").value.trim(), { historical: true });
+  </script>
+</body>
+</html>
