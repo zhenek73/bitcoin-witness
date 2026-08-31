@@ -22,3 +22,22 @@ services:
       - all
     ports:
       - "9944:9944"
+
+  # Attestors are a separate binary in the same image (/usr/bin/attestor),
+  # not a distinct image -- this service was referenced by name in the
+  # README ("docker compose up -d attestor") but never actually defined here.
+  # ATTESTOR_SECRET must be exported in the shell before `docker compose up`;
+  # it is never written into this file or the image.
+  attestor:
+    container_name: bw-cc3-attestor
+    image: gluwa/creditcoin3
+    entrypoint: /usr/bin/attestor
+    command:
+      - --config
+      - /config/attestor-config.yaml
+    environment:
+      - ATTESTOR_SECRET
+    volumes:
+      - ./attestor-config.yaml:/config/attestor-config.yaml:ro
+    depends_on:
+      - cc3

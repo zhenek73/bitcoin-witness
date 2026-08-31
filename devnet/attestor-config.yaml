@@ -20,4 +20,4 @@ eth:
   url: "wss://evm.exsat.network/"
 
 cc3:
-  url: "ws://127.0.0.1:9944"
+  url: "ws://cc3:9944"  # docker-compose service name, not localhost -- attestor runs in its own container
