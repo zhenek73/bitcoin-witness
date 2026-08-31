@@ -9,12 +9,13 @@
   },
   "dependencies": {
     "@gluwa/cc-next-query-builder": "^0.8.0",
-    "ethers": "^6.15.0",
     "@wharfkit/session": "^1.6.1",
-    "@wharfkit/wallet-plugin-privatekey": "^1.1.0"
+    "@wharfkit/wallet-plugin-privatekey": "^1.1.0",
+    "ethers": "^6.15.0"
   },
   "devDependencies": {
     "@types/node": "^24.0.13",
+    "solc": "^0.8.24",
     "tsx": "^4.20.3",
     "typescript": "^5.6.0"
   }
