@@ -27,7 +27,10 @@ services:
   # not a distinct image -- this service was referenced by name in the
   # README ("docker compose up -d attestor") but never actually defined here.
   # ATTESTOR_SECRET must be exported in the shell before `docker compose up`;
-  # it is never written into this file or the image.
+  # it is never written into this file or the image. Put it in devnet/.env
+  # instead (gitignored) so `docker compose up` picks it up automatically --
+  # exporting it by hand in a fresh shell is easy to forget and the container
+  # fails loudly with "invalid mnemonic or hex seed" if it's missing.
   attestor:
     container_name: bw-cc3-attestor
     image: gluwa/creditcoin3
@@ -39,5 +42,27 @@ services:
       - ATTESTOR_SECRET
     volumes:
       - ./attestor-config.yaml:/config/attestor-config.yaml:ro
+    depends_on:
+      - cc3
+
+  # Also a separate binary in the same image (/usr/bin/proof-gen-api-server).
+  # Generates the inclusion + continuity proofs demo.ts/prove_fact.ts submit
+  # to BitcoinFactVerifier.proveBitcoinFact. Needs a YAML config (chain_key
+  # isn't settable via CLI flags -- the only CLI mode hardcodes chain_key=2)
+  # plus --cc3-rpc-url on the command line, since that one flag is
+  # deliberately NOT read from the YAML (CLI/env only, per --help).
+  proofgen:
+    container_name: bw-cc3-proofgen
+    image: gluwa/creditcoin3
+    entrypoint: /usr/bin/proof-gen-api-server
+    command:
+      - --cc3-rpc-url
+      - ws://cc3:9944
+      - --config
+      - /config/proofgen-config.yaml
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./proofgen-config.yaml:/config/proofgen-config.yaml:ro
     depends_on:
       - cc3

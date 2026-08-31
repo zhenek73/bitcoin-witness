@@ -1,0 +1,9 @@
+bind_host: "0.0.0.0"
+bind_port: 3100
+cc3_rpc_url: "ws://cc3:9944"
+max_batch_size: 10
+max_batch_span: 1000
+chains:
+  - chain_key: 7
+    eth_rpc_url: "wss://evm.exsat.network/"
+    block_confirmation_depth: 0
