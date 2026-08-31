@@ -23,6 +23,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  ABI,
   APIClient,
   FetchProvider,
   PrivateKey,
@@ -39,8 +40,8 @@ const RPC = process.env.EOS_RPC ?? 'https://eos.greymass.com';
 const ACCOUNT = 'btcwitness11';
 /** The new active key, in legacy form. Verified to be the same key as
  *  PUB_K1_8RKaCw2V2u8UriTu2ZdbAGXyXbuKaaRiTwn6RTvXw5AJEmkTjX. */
-const NEW_ACTIVE_PUBKEY = 'EOS8RKaCw2V2u8UriTu2ZdbAGXyXbuKaaRiTwn6RTvXw5AJFFJ1yV';
-const RAM_KBYTES = 16;
+const NEW_ACTIVE_PUBKEY = 'EOS6cyuGEVn9Srb6z1bhwrFAWEUQS12WyoizGHN4dBybdLG8VoWv2'; // verified via get_account, 2026-08-31
+const RAM_KBYTES = 100; // setcode costs ~10x wasm size in RAM (chain's setcode_ram_bytes_multiplier); 16KB was nowhere near enough
 
 // ---------------------------------------------------------------- env ------
 
@@ -160,20 +161,34 @@ async function stepRam() {
   const st = await activeState();
   const wasmSize = readFileSync(join(BUILD, 'btcwitness.wasm')).length;
   const abiSize = readFileSync(join(BUILD, 'btcwitness.abi')).length;
-  const needed = wasmSize + abiSize;
-  if (st.ramFree > needed * 1.2) {
-    console.log(`  ram: ${st.ramFree} bytes free, need ~${needed} — skipping`);
+  // setcode bills RAM at roughly 10x the wasm byte size (the chain's
+  // setcode_ram_bytes_multiplier), not the raw file size -- confirmed
+  // against a real push_transaction rejection: an 11,374-byte wasm + 960-byte
+  // abi actually needed 117,809 bytes of usage, not ~12,334.
+  const needed = wasmSize * 10 + abiSize + 5000;
+  if (st.ramFree > needed) {
+    console.log(`  ram: ${st.ramFree} bytes free, need ~${needed} (10x wasm size, not raw) — skipping`);
     return;
   }
+  // Buy only the shortfall (plus a small margin), not a flat amount --
+  // buying RAM_KBYTES from scratch every time is wasteful once some RAM is
+  // already owned, and can overshoot the payer's balance.
+  const shortfall = needed - st.ramFree;
+  const bytesToBuy = shortfall + 8192; // margin against estimate drift
   const payer = process.env.PAYER_ACCOUNT ?? 'harvesterbot';
-  console.log(`  ram: buying ${RAM_KBYTES} KB for ${ACCOUNT}, paid by ${payer}`);
+  console.log(`  ram: buying ${bytesToBuy} bytes for ${ACCOUNT} (shortfall ${shortfall}), paid by ${payer}`);
+  // eosio::buyrambytes moves classic eosio.token EOS internally, but EOS
+  // mainnet's Vaulta rebrand keeps balances in core.vaulta's 'A' token --
+  // confirmed by a real 'overdrawn balance' rejection naming
+  // eosio.token::transfer even though the payer holds plenty of A.
+  // core.vaulta mirrors the same system actions against the real balance.
   const res = await push(
     [
       {
-        account: 'eosio',
+        account: 'core.vaulta',
         name: 'buyrambytes',
         authorization: [{ actor: payer, permission: 'active' }],
-        data: { payer, receiver: ACCOUNT, bytes: RAM_KBYTES * 1024 },
+        data: { payer, receiver: ACCOUNT, bytes: bytesToBuy },
       },
     ],
     requireKey('PAYER_KEY')
@@ -186,10 +201,13 @@ async function stepCode() {
   const wasm = readFileSync(join(BUILD, 'btcwitness.wasm'));
   const abiJson = JSON.parse(readFileSync(join(BUILD, 'btcwitness.abi'), 'utf8'));
 
-  // The ABI goes on-chain in binary form, encoded against the built-in
-  // abi_def type rather than shipped as JSON.
-  const { abi: eosioAbi } = await client.v1.chain.get_abi('eosio');
-  const encodedAbi = Serializer.encode({ object: abiJson, type: 'abi_def', abi: eosioAbi });
+  // The ABI goes on-chain in binary form. 'abi_def' is not a type any
+  // contract's ABI declares (it's the meta-schema for ABIs themselves), so
+  // it can't be resolved by fetching eosio's ABI as a type dictionary.
+  // @wharfkit/antelope ships ABI as a self-describing serializable class
+  // (its own fromABI/toABI), so encode through that instead.
+  const abiInstance = ABI.from(abiJson);
+  const encodedAbi = Serializer.encode({ object: abiInstance });
 
   console.log(`  code: deploying ${wasm.length} bytes of wasm + ABI`);
   const res = await push(
@@ -227,6 +245,37 @@ async function report() {
   return st;
 }
 
+/** Works out what still needs doing and which keys that will require, so a
+ *  missing key is reported before anything is signed rather than halfway
+ *  through. Steps already done ask for nothing. */
+async function preflight(only) {
+  const st = await activeState();
+  const wasm = readFileSync(join(BUILD, 'btcwitness.wasm')).length;
+  const abi = readFileSync(join(BUILD, 'btcwitness.abi')).length;
+  // same 10x setcode RAM multiplier correction as stepRam()
+  const ramNeeded = wasm * 10 + abi + 5000;
+
+  const pending = [];
+  if ((!only || only === 'auth') && !(st.hasNewKey && st.hasEosioCode)) {
+    pending.push(['auth', 'OWNER_KEY']);
+  }
+  if ((!only || only === 'ram') && st.ramFree <= ramNeeded) {
+    pending.push(['ram', 'PAYER_KEY']);
+  }
+  if ((!only || only === 'code') && !(await isDeployed())) {
+    pending.push(['code', 'ACTIVE_KEY']);
+  }
+
+  const missing = pending.filter(([, k]) => !process.env[k]);
+  if (missing.length) {
+    console.error('Missing keys in deploy/.env:\n');
+    for (const [step, key] of missing) console.error(`  ${key.padEnd(12)} (needed by the "${step}" step)`);
+    console.error('\nFill those in and re-run. Steps that are already done need no key.');
+    process.exit(1);
+  }
+  return pending.map(([s]) => s);
+}
+
 const args = process.argv.slice(2);
 const only = args.includes('--step') ? args[args.indexOf('--step') + 1] : null;
 
@@ -234,8 +283,14 @@ if (args.includes('--check')) {
   await report();
 } else {
   console.log('Bitcoin Witness — deploying to EOS mainnet\n');
-  if (!only || only === 'auth') await stepAuth();
-  if (!only || only === 'ram') await stepRam();
-  if (!only || only === 'code') await stepCode();
+  const pending = await preflight(only);
+  if (!pending.length) {
+    console.log('  nothing to do — everything is already in place');
+  } else {
+    console.log(`  pending: ${pending.join(', ')}\n`);
+    if (pending.includes('auth')) await stepAuth();
+    if (pending.includes('ram')) await stepRam();
+    if (pending.includes('code')) await stepCode();
+  }
   await report();
 }
