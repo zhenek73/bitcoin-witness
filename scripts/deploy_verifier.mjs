@@ -22,6 +22,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import solc from 'solc';
 import { JsonRpcProvider, Wallet, ContractFactory, getAddress } from 'ethers';
+import { reservedAddress } from './reserved-address.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SOL_PATH = join(HERE, '..', 'contracts', 'asc', 'BitcoinFactVerifier.sol');
@@ -29,10 +30,10 @@ const RPC = process.env.CREDITCOIN_RPC ?? 'http://127.0.0.1:9944';
 
 const EXSAT_CHAIN_KEY = Number(process.env.EXSAT_CHAIN_KEY ?? '7');
 const EXPECTED_EMITTER = getAddress(
-  process.env.RECEIVER_ADDRESS ?? '0xF381797E6fa3bCeCBc9Ac054D775010A409aA252'
+  process.env.RECEIVER_ADDRESS ?? '0xBF823785C5749532AE927d7285093Eae279fe16C'
 );
 const EXPECTED_RELAYER = getAddress(
-  process.env.RELAYER_ADDRESS ?? '0xBbbBbBBb3E51C7666aC602100000000000000000'
+  process.env.RELAYER_ADDRESS ?? reservedAddress('btcwitness11')
 );
 
 function loadEnv() {

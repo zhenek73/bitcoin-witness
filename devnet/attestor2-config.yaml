@@ -1,0 +1,38 @@
+---
+# Second attestor process — required, not optional, and deliberately running the
+# SAME identity as attestor 1.
+#
+# The problem: Attestcoin attestors publish their votes over a libp2p gossipsub
+# topic ("7/attest" for chain_key 7). gossipsub refuses to publish to a topic
+# that has no other subscribed peer, so a lone attestor can never publish
+# anything — every attestation fails with NoPeersSubscribedToTopic and is queued
+# forever. The votes themselves are produced correctly; only the gossip layer is
+# stuck.
+#
+# It must be a DISTINCT identity. Running the same secret in a second process
+# does not work: the libp2p peer id is derived from the attestor secret, so both
+# processes come up as the very same peer id (verified — both logged
+# 12D3KooWRJKE3es5T5oJhTn7fWh8n8smQ7w1JgoqtAYaqv5eu8FL) and libp2p will never
+# form a mesh between two nodes that believe they are the same peer.
+#
+# A distinct account must be registered AND elected before its process
+# subscribes to the topic (an attestor waits on election before starting p2p).
+# Election does not require a BLS key — attestor 1 was itself seated with
+# blsPublicKey = null and published its key afterwards — but forceElection acts
+# on a specific epoch, so re-running it for an epoch whose election already
+# happened changes nothing. See bootstrap-attestor2.mjs.
+attestor:
+  name: "Bitcoin Witness Attestor 2"
+  chain_key: 7
+  secret: "${ATTESTOR_SECRET}"  # value comes from ATTESTOR2_SECRET in .env, remapped in docker-compose.yaml
+
+api:
+  # Different port from attestor 1 — same identity, separate process.
+  port: 9101
+
+eth:
+  # Same shim as attestor 1 — see docker-compose.yaml for why.
+  url: "ws://exsat-shim:8546"
+
+cc3:
+  url: "ws://cc3:9944"

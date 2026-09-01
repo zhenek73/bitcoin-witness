@@ -4,6 +4,15 @@ cc3_rpc_url: "ws://cc3:9944"
 max_batch_size: 10
 max_batch_span: 1000
 chains:
-  - chain_key: 7
-    eth_rpc_url: "wss://evm.exsat.network/"
+  # Chain key 8 = the "exSat2" registration (same chainId 7200, same RPC, same
+  # data) whose attestation genesis is 59791700 -- just below block 59791789,
+  # where our BitcoinUtxoAttested event lives. Chain key 7's genesis is pinned at
+  # 59225940 and cannot be moved once a chain has attestation history, and
+  # catching up from there would take ~40 hours. See register-exsat2.mjs.
+  - chain_key: 8
+    # Was "wss://evm.exsat.network/". proofgen performs the SAME
+    # transactions/receipts-root check the attestor does, and fails the same way
+    # on exSat's always-zero receiptsRoot ("block body or receipts inconsistent
+    # with header from this RPC peer"), so it needs the shim too.
+    eth_rpc_url: "ws://exsat-shim:8546"
     block_confirmation_depth: 0

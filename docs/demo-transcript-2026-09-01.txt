@@ -1,0 +1,40 @@
+Bitcoin Witness — end-to-end demo
+[1/6] Reading the UTXO from exSat's Bitcoin index on EOS mainnet
+      indexed to Bitcoin height 959,115
+      166,186,512 UTXOs in the set
+      Bitcoin's tip is 965,030 — the index is 5,915 blocks behind.
+      Every fact below is therefore true AS OF the indexed height, not today.
+      found: 230cf03a6ce420eaa42e3c64feebb47920f3470efb4323b4574b4b6e5a004f65:0
+      value: 5,000,000,000 sats (50 BTC)
+      utxo_id: 712a4f5c9d830fcc2794caff33107951354f4d0d10594235d0d84c92e27ff54a
+
+[2/6] Relaying into exSat EVM via btcwitness::relayutxo
+      antelope tx 9175177d63f7e27f29005d14f916a4e857f9b9a309ca02b0fb440f9da1b56aba
+      (an inline action to evm.xsat — same chain, not a bridge)
+
+[3/6] Waiting for BitcoinUtxoAttested on exSat EVM
+      evm tx 0x9f10a5490d28fa8885aba732dcda4ada9d03e6c231e3996b570fcf42c631a34f in block 59801416
+      relayer topic 0x000000000000000000000000bbbbbbbbbbbbbbbbbbbbbbbb3e51c7666ac60210
+
+[4/6] Source chain 0x657853617432 (chain_key 8, chainId 7200)
+      waiting for height 59801416 to be attested...
+      still behind, waiting again (1/8)...
+      attested
+      generating inclusion + continuity proofs...
+      proof API not ready yet, retrying (1/10)...
+      proof API not ready yet, retrying (2/10)...
+      proof API not ready yet, retrying (3/10)...
+      proof API not ready yet, retrying (4/10)...
+      proof API not ready yet, retrying (5/10)...
+[5/6] proof at height 59801416, tx index 0
+
+[6/6] Verifying on Creditcoin
+      creditcoin tx 0x0450c9208c940f42ec7a92cb502c97acdff228db9ff0c20e6f6516c396bf695b (gas 117530)
+
+Bitcoin fact now readable by any Creditcoin contract:
+  UTXO      230cf03a6ce420eaa42e3c64feebb47920f3470efb4323b4574b4b6e5a004f65:0
+  value     5,000,000,000 sats (50 BTC)
+  proven    true at exSat EVM height 59801416
+  recorded  2026-09-01T11:27:15.000Z
+
+No wrapping, no custodian, no bridge. The BTC never moved.

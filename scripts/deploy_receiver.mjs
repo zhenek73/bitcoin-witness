@@ -11,12 +11,13 @@ import { readFileSync, existsSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import solc from 'solc';
-import { JsonRpcProvider, Wallet, ContractFactory, getAddress } from 'ethers';
+import { JsonRpcProvider, Wallet, ContractFactory } from 'ethers';
+import { reservedAddress } from './reserved-address.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SOL_PATH = join(HERE, '..', 'contracts', 'evm', 'BitcoinWitnessReceiver.sol');
 const RPC = 'https://evm.exsat.network';
-const RELAYER_ADDRESS = getAddress('0xBbbBbBBb3E51C7666aC602100000000000000000');
+const RELAYER_ADDRESS = reservedAddress('btcwitness11');
 
 function loadEnv() {
   const path = join(HERE, '.env');

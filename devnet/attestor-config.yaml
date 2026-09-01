@@ -10,14 +10,23 @@
 # be inlined here has been discarded.)
 attestor:
   name: "Bitcoin Witness Attestor"
-  chain_key: 7                 # assigned by register_chain, NOT the EVM chainId
+  # Chain key 8 = the "exSat2" registration (same chainId 7200, same RPC, same
+  # data) whose attestation genesis is 59791700 -- just below block 59791789,
+  # where our BitcoinUtxoAttested event lives. Chain key 7's genesis is pinned at
+  # 59225940 and cannot be moved once a chain has attestation history, and
+  # catching up from there would take ~40 hours. See register-exsat2.mjs.
+  chain_key: 8                 # assigned by register_chain, NOT the EVM chainId
   secret: "${ATTESTOR_SECRET}"
 
 api:
   port: 9100
 
 eth:
-  url: "wss://evm.exsat.network/"
+  # Was "wss://evm.exsat.network/" -- now routed through the local shim, which
+  # relays everything verbatim but repairs exSat's always-zero `receiptsRoot`
+  # header field for transaction-bearing blocks. See the exsat-shim service in
+  # docker-compose.yaml (and exsat-shim/server.mjs) for the full rationale.
+  url: "ws://exsat-shim:8546"
 
 cc3:
   url: "ws://cc3:9944"  # docker-compose service name, not localhost -- attestor runs in its own container

@@ -288,17 +288,43 @@ async function main() {
   if (!chain) throw new Error(`chain_key ${EXSAT_CHAIN_KEY} is not registered — run register_chain first`);
   console.log(`[4/6] Source chain ${chain.chainName} (chain_key ${chain.chainKey}, chainId ${chain.chainId})`);
 
+  // Attestation lags the chain head, and the proof API refuses to build a proof
+  // for a height it has not seen attested yet -- it answers HTTP 422
+  // {"code":"BlockNotReady"}. So the wait has to come BEFORE generation, not
+  // after it: a freshly relayed transaction is always a minute or two ahead of
+  // the attestor, and generating first just fails immediately.
+  console.log(`      waiting for height ${log.blockNumber} to be attested...`);
+  // waitUntilHeightAttested has its own internal timeout (~90s) and throws when
+  // it expires. Attestations land every `interval` blocks (10 here), so a run
+  // that starts a few blocks short of the next attestation can time out with
+  // the target only 2-3 blocks away -- observed exactly that: it gave up at
+  // 59801280 while waiting for 59801283. Retry rather than failing the run.
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await info.waitUntilHeightAttested(EXSAT_CHAIN_KEY, Number(log.blockNumber));
+      break;
+    } catch (e) {
+      if (attempt >= 8) throw e;
+      console.log(`      still behind, waiting again (${attempt}/8)...`);
+    }
+  }
+  console.log('      attested');
+
   console.log('      generating inclusion + continuity proofs...');
   const generator = new proofGenerator.api.ProverAPIProofGenerator(EXSAT_CHAIN_KEY, PROOF_API_URL);
-  const result = await generator.generateProof(log.transactionHash);
+
+  // The proof API tracks attestations through its own CC3 subscription, so it
+  // can still be a beat behind the chain state we just read. Retry briefly
+  // rather than failing the whole run on a few seconds of skew.
+  let result = await generator.generateProof(log.transactionHash);
+  for (let attempt = 1; attempt <= 10 && !result.success; attempt++) {
+    console.log(`      proof API not ready yet, retrying (${attempt}/10)...`);
+    await new Promise((r) => setTimeout(r, 6000));
+    result = await generator.generateProof(log.transactionHash);
+  }
   if (!result.success || !result.data) throw new Error(`proof generation failed: ${JSON.stringify(result)}`);
   const proof = result.data;
-  console.log(`[5/6] proof at height ${proof.headerNumber}, tx index ${proof.txIndex}`);
-
-  // Attestation lags the head; proving before the height is attested fails.
-  console.log('      waiting for that height to be attested...');
-  await info.waitUntilHeightAttested(EXSAT_CHAIN_KEY, proof.headerNumber);
-  console.log('      attested\n');
+  console.log(`[5/6] proof at height ${proof.headerNumber}, tx index ${proof.txIndex}\n`);
 
   // ---- 6. proof on Creditcoin ---------------------------------------------
   console.log('[6/6] Verifying on Creditcoin');

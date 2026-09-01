@@ -234,19 +234,23 @@
       HYPERION: "https://eos.hyperion.eosrio.io",
       UTXOMNG: "utxomng.xsat",
       BTCWITNESS: "btcwitness11",
-      RELAYER: "0xBbbBbBBb3E51C7666aC602100000000000000000",
+      RELAYER: "0xBbbbBbbBBBbbBBbbbbBBbbBB3E51C7666ac60210",
       EXSAT_RPC: "https://evm.exsat.network",
       EXSAT_EXPLORER: "https://scan.exsat.network",
       EXSAT_CHAIN_ID: 7200,
-      EXSAT_CHAIN_KEY: 7,
-      RECEIVER: "0xF381797E6fa3bCeCBc9Ac054D775010A409aA252",
-      RECEIVER_DEPLOY_TX: "0xc2e8388fee4845797598ec56d60cfc6e5746c7ee171df863a65c42d4206e24f8",
+      // 8, not 7: chain 7 registered exSat with attestation genesis 59225940 (near
+      // the head on 2026-08-26), and that genesis is immutable once a chain has
+      // attestation history. Chain key 8 is the same exSat, re-registered as "exSat2"
+      // with genesis 59791700 so the blocks this demo proves are actually reachable.
+      EXSAT_CHAIN_KEY: 8,
+      RECEIVER: "0xBF823785C5749532AE927d7285093Eae279fe16C",
+      RECEIVER_DEPLOY_TX: "0xcf491cdeb348d40aa3ece17a9d668b37ddf1ff9af216c3bb950e402b0ed9af1d",
       NATIVE_DEPLOY_TX: "18f6fc136895398a06fe0babaad81913653765421386e143081a2792084f6086",
-      VERIFIER: "0xc01Ee7f10EA4aF4673cFff62710E1D7792aBa8f3",
+      VERIFIER: "0x3ed62137c5DB927cb137c26455969116BF0c23Cb",
       CHAIN_INFO: "0x0000000000000000000000000000000000000fd3",
       ATTESTOR: "5CB4odFpzLL7MFFcr12VX18YgEvJegpXkdvkeYun77hUKtc5",
-      ATTESTATION_HEIGHT: 59225940,
-      ATTESTATION_DIGEST: "0x9768a07f934e82a9fdff2d6c8a4af00ce756d826daa11d3c0a57386897035f79",
+      ATTESTATION_HEIGHT: 59791700,
+      ATTESTATION_DIGEST: "0x533cad0c17ee3f709c9be6274755b62b77022e4bb52c94a3cb2a9ee0955206ce",
       KNOWN: {
         txid: "e1afd89295b68bc5247fe0ca2885dd4b8818d7ce430faa615067d7bab8640156",
         index: 0

@@ -23,6 +23,28 @@ services:
     ports:
       - "9944:9944"
 
+  # exSat's EVM layer never populates `receiptsRoot` / `stateRoot` in its block
+  # headers -- every block reports 32 zero bytes for both, whether or not it has
+  # transactions (verified across many consecutive blocks on evm.exsat.network).
+  # The attestor recomputes the receipts root from the block's own receipts and
+  # compares it to the header; for an EMPTY block it skips that comparison, but
+  # for any block WITH a transaction the computed root is a real non-zero hash
+  # that can never equal exSat's constant zero -- so the attestor rejects it as
+  # a "possible reorg", retries forever, and never advances past the first
+  # transaction-bearing block. This shim sits between the two: it relays every
+  # JSON-RPC message verbatim except that, for blocks that do contain
+  # transactions, it fills in the zeroed `receiptsRoot` with the root computed
+  # from that block's own real receipts. Nothing else is altered -- block hash,
+  # transactions and transactionsRoot (which is genuine and canonical on exSat,
+  # independently verified, and is what the inclusion proofs are actually built
+  # on) all pass through untouched.
+  exsat-shim:
+    container_name: bw-exsat-shim
+    build: ./exsat-shim
+    restart: unless-stopped
+    ports:
+      - "8546:8546"
+
   # Attestors are a separate binary in the same image (/usr/bin/attestor),
   # not a distinct image -- this service was referenced by name in the
   # README ("docker compose up -d attestor") but never actually defined here.
@@ -44,6 +66,30 @@ services:
       - ./attestor-config.yaml:/config/attestor-config.yaml:ro
     depends_on:
       - cc3
+      - exsat-shim
+
+  # See attestor2-config.yaml: gossipsub cannot publish to a topic with no other
+  # subscriber, so a lone attestor queues every vote forever with
+  # NoPeersSubscribedToTopic. This second process runs the SAME attestor identity
+  # purely to be that subscriber. It is gossip-layer infrastructure, not a second
+  # validator — a distinct account cannot reach the topic at all (it would have
+  # to be elected first, and an unelected account can never publish its BLS key).
+  attestor2:
+    container_name: bw-cc3-attestor2
+    image: gluwa/creditcoin3
+    entrypoint: /usr/bin/attestor
+    command:
+      - --config
+      - /config/attestor2-config.yaml
+    environment:
+      # attestor 2's own distinct key (a distinct libp2p peer id is the point),
+      # remapped onto the fixed name the binary expands inside its config.
+      - ATTESTOR_SECRET=${ATTESTOR2_SECRET}
+    volumes:
+      - ./attestor2-config.yaml:/config/attestor2-config.yaml:ro
+    depends_on:
+      - cc3
+      - exsat-shim
 
   # Also a separate binary in the same image (/usr/bin/proof-gen-api-server).
   # Generates the inclusion + continuity proofs demo.ts/prove_fact.ts submit
@@ -66,3 +112,4 @@ services:
       - ./proofgen-config.yaml:/config/proofgen-config.yaml:ro
     depends_on:
       - cc3
+      - exsat-shim
