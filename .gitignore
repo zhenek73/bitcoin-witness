@@ -19,3 +19,9 @@ Thumbs.db
 # Container/state snapshots. Large, machine-specific, and never reproducible
 # from the repo -- the devnet backup lives outside the working tree on purpose.
 *.tar
+
+# Outreach drafts. These are written for a specific audience and are unposted
+# until they are posted; an unfinished one read as a project document would
+# misrepresent the project. PITCH.md, the submission pitch, is deliberately not
+# matched here.
+PITCH-*.md
