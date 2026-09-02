@@ -1,0 +1,15 @@
+import { ApiPromise, WsProvider } from '@polkadot/api';
+const A = process.argv[2];
+const api = await ApiPromise.create({ provider: new WsProvider(process.argv[3] ?? 'ws://127.0.0.1:9944'), noInitWarn: true });
+const best = await api.rpc.chain.getHeader();
+const finHash = await api.rpc.chain.getFinalizedHead();
+const fin = await api.rpc.chain.getHeader(finHash);
+console.log('best block     :', best.number.toNumber());
+console.log('finalized block:', fin.number.toNumber());
+const at = await api.at(finHash);
+const cur = await api.query.system.account(A);
+const atFin = await at.query.system.account(A);
+console.log('free @best     :', cur.data.free.toString());
+console.log('free @finalized:', atFin.data.free.toString());
+console.log('ss58 prefix    :', api.registry.chainSS58);
+await api.disconnect();

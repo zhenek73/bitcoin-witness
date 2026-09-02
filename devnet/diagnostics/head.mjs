@@ -1,0 +1,10 @@
+import { ApiPromise, WsProvider } from '@polkadot/api';
+const api = await ApiPromise.create({ provider: new WsProvider('ws://127.0.0.1:9944'), noInitWarn: true });
+const h1 = (await api.rpc.chain.getHeader()).number.toNumber();
+console.log('best block now:', h1);
+await new Promise(r => setTimeout(r, 12000));
+const h2 = (await api.rpc.chain.getHeader()).number.toNumber();
+console.log('best block +12s:', h2, h2 > h1 ? '(producing)' : '(STALLED)');
+const chains = await api.query.supportedChains.chains?.entries?.() ?? [];
+console.log('registered chains:', JSON.stringify(chains.map(([k,v]) => [k.toHuman(), v.toHuman()?.chainName ?? v.toHuman()])).slice(0, 400));
+await api.disconnect();

@@ -9,3 +9,13 @@ node_modules/
 !contracts/**/*.abi.example
 .DS_Store
 Thumbs.db
+
+# One-off run output. Every debugging session leaves these behind; none of them
+# belong in history. Real transcripts worth keeping live in docs/ under an
+# explicit name (see docs/demo-transcript-2026-09-01.txt).
+*.err
+*.bak
+
+# Container/state snapshots. Large, machine-specific, and never reproducible
+# from the repo -- the devnet backup lives outside the working tree on purpose.
+*.tar
