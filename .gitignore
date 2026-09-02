@@ -16,9 +16,11 @@ Thumbs.db
 *.err
 *.bak
 
-# Container/state snapshots. Large, machine-specific, and never reproducible
-# from the repo -- the devnet backup lives outside the working tree on purpose.
+# Archives. Container snapshots are large, machine-specific and never reproducible
+# from the repo; design and redesign hand-offs arrive zipped and belong in the tree
+# unpacked, as files that can be diffed, or not at all.
 *.tar
+*.zip
 
 # Outreach drafts. These are written for a specific audience and are unposted
 # until they are posted; an unfinished one read as a project document would
