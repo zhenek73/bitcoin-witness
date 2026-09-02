@@ -78,6 +78,13 @@ let skip_receipt_root = (chain_id == ETHEREUM_MAINNET_CHAIN_ID
     || chain_id == EXSAT_CHAIN_ID;
 ```
 
+## Testing
+
+`cargo check -p attestor` passes with this change applied (clean checkout of `usc-dev`,
+patch on top). Note that `cargo check -p eth` on its own fails both with and without this
+patch — the crate does not build in isolation because `tokio`'s `signal` feature is enabled
+by a sibling crate — so the meaningful check is the one through `attestor`.
+
 ## Alternative, if you prefer it
 
 Hard-coding a second chain id follows the existing style, but a per-chain
