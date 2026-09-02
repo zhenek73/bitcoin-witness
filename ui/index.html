@@ -4,164 +4,307 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Bitcoin Witness — The Witness Trail</title>
+  <meta name="description" content="Proving a fact about Bitcoin on Creditcoin without wrapping, bridging, or moving the BTC. Every number on this page is read live from a public endpoint." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.5/dist/ethers.umd.min.js"></script>
   <style>
     :root {
       --bg: #f4f2ec;
       --bg-2: #ebe7dc;
-      --ink: #1c1a16;
-      --muted: #6e6a60;
-      --line: #d4cfc3;
-      --card: #fffcf6;
-      --amber: #b7791f;
-      --violet: #6b4fd6;
-      --teal: #0d7a76;
-      --red: #c0392b;
-      --ok: #2d6a4f;
-      --shadow: 0 1px 0 rgba(28,26,22,.04);
+      --ink: #17150f;
+      --muted: #6b675c;
+      --faint: #8d887a;
+      --line: #d8d2c4;
+      --line-2: #c3bcaa;
+      --card: #fffdf8;
+      --amber: #a8641a;
+      --violet: #5b41c4;
+      --teal: #0b6e6a;
+      --red: #b23025;
+      --ok: #23624a;
+      --ok-bg: #e2efe6;
+      --warn-bg: #f6ecd8;
+      --shadow: 0 1px 2px rgba(23,21,15,.05), 0 8px 24px -18px rgba(23,21,15,.35);
     }
     @media (prefers-color-scheme: dark) {
       :root {
-        --bg: #12110f;
-        --bg-2: #1b1916;
-        --ink: #efece4;
-        --muted: #9a9588;
-        --line: #2f2c26;
-        --card: #1a1814;
-        --amber: #e0a53a;
-        --violet: #9b86f0;
-        --teal: #3dccc4;
-        --red: #ee6b5e;
-        --ok: #6ee7b7;
+        --bg: #100f0d;
+        --bg-2: #1a1815;
+        --ink: #f2efe6;
+        --muted: #9d988a;
+        --faint: #7d786b;
+        --line: #302c25;
+        --line-2: #433d33;
+        --card: #191713;
+        --amber: #e6ad4a;
+        --violet: #a48ffb;
+        --teal: #45d3ca;
+        --red: #f2796b;
+        --ok: #6fe3ad;
+        --ok-bg: #16241d;
+        --warn-bg: #241d10;
         --shadow: none;
       }
     }
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; }
     body {
-      font-family: Inter, system-ui, sans-serif;
+      font-family: Inter, system-ui, -apple-system, sans-serif;
       background: var(--bg);
       color: var(--ink);
-      line-height: 1.45;
+      line-height: 1.5;
+      font-size: 15.5px;
+      -webkit-font-smoothing: antialiased;
     }
-    .wrap { max-width: 760px; margin: 0 auto; padding: 28px 20px 80px; }
+    .wrap { max-width: 860px; margin: 0 auto; padding: 30px 22px 100px; }
+    .mono { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace; }
+
+    /* ---------- header ---------- */
     header.top {
       display: flex; align-items: flex-start; justify-content: space-between;
-      gap: 16px; margin-bottom: 22px;
+      gap: 18px; padding-bottom: 22px; border-bottom: 1px solid var(--line);
     }
-    .brand { font-size: 13px; letter-spacing: .14em; font-weight: 600; }
-    .path { font-size: 12px; color: var(--muted); margin-top: 4px; }
-    .path b { color: var(--ink); font-weight: 500; }
+    .brand { font-size: 14px; letter-spacing: .16em; font-weight: 700; }
+    .path { font-size: 13px; color: var(--muted); margin-top: 5px; letter-spacing: .02em; }
     button.icon {
       border: 1px solid var(--line); background: var(--card); color: var(--ink);
-      width: 36px; height: 36px; border-radius: 8px; cursor: pointer;
+      width: 40px; height: 40px; border-radius: 9px; cursor: pointer; font-size: 15px;
+      flex: 0 0 auto;
     }
-    button.icon:hover { border-color: var(--muted); }
+    button.icon:hover { border-color: var(--line-2); }
+
+    .claim {
+      margin: 26px 0 8px; font-size: 25px; line-height: 1.25; font-weight: 600;
+      letter-spacing: -.015em; max-width: 24ch;
+    }
+    .claim em { font-style: normal; color: var(--amber); }
+    .sub { color: var(--muted); font-size: 15px; max-width: 62ch; margin: 0 0 26px; }
+
+    /* ---------- generic section ---------- */
+    section { margin-top: 46px; }
+    h2.sec {
+      font-size: 12.5px; letter-spacing: .15em; font-weight: 700; margin: 0 0 4px;
+      color: var(--muted);
+    }
+    .sec-lede { font-size: 14.5px; color: var(--muted); margin: 0 0 16px; max-width: 66ch; }
+
     .panel {
-      background: var(--card); border: 1px solid var(--line); border-radius: 12px;
-      padding: 16px; margin-bottom: 18px; box-shadow: var(--shadow);
+      background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+      padding: 18px; box-shadow: var(--shadow);
     }
-    .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
-    label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+    .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+    label { display: block; font-size: 11.5px; color: var(--muted); margin-bottom: 5px; letter-spacing: .05em; text-transform: uppercase; }
     input[type="text"], input[type="number"], input[type="url"] {
       font-family: "JetBrains Mono", ui-monospace, monospace;
-      font-size: 12.5px; width: 100%;
+      font-size: 13.5px; width: 100%;
       border: 1px solid var(--line); background: var(--bg); color: var(--ink);
-      border-radius: 8px; padding: 9px 10px;
+      border-radius: 9px; padding: 11px 12px;
     }
-    .grow { flex: 1 1 280px; }
-    .vout { flex: 0 0 88px; }
+    input:focus { outline: 2px solid var(--line-2); outline-offset: -1px; }
+    .grow { flex: 1 1 300px; min-width: 0; }
+    .vout { flex: 0 0 96px; }
     button.primary {
-      background: var(--ink); color: var(--bg); border: 0; border-radius: 8px;
-      padding: 10px 14px; font: 500 13px Inter, sans-serif; cursor: pointer;
-      white-space: nowrap; height: 38px;
+      background: var(--ink); color: var(--bg); border: 0; border-radius: 9px;
+      padding: 12px 18px; font: 600 14px Inter, sans-serif; cursor: pointer;
+      white-space: nowrap; height: 42px;
     }
-    button.primary:disabled { opacity: .45; cursor: not-allowed; }
+    button.primary:hover { opacity: .9; }
+    button.primary:disabled { opacity: .4; cursor: not-allowed; }
+    button.ghost {
+      background: none; border: 1px solid var(--line); color: var(--ink);
+      border-radius: 9px; padding: 11px 14px; font: 500 13px Inter, sans-serif;
+      cursor: pointer; height: 42px; white-space: nowrap;
+    }
+    button.ghost:hover { border-color: var(--line-2); }
     button.linkish {
-      background: none; border: 0; color: var(--teal); font: 500 12px Inter, sans-serif;
-      cursor: pointer; padding: 0;
+      background: none; border: 0; color: var(--teal); font: 600 13px Inter, sans-serif;
+      cursor: pointer; padding: 0; text-align: left;
     }
-    .note { font-size: 12px; color: var(--muted); margin-top: 10px; }
-    .settings { display: none; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+    button.linkish:hover { text-decoration: underline; }
+    .note { font-size: 13px; color: var(--muted); margin: 12px 0 0; }
+    .settings { display: none; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); }
     .settings.open { display: block; }
     .settings .warn {
-      font-size: 12px; color: var(--muted); background: var(--bg-2);
-      border-radius: 8px; padding: 10px 12px; margin-top: 10px;
+      font-size: 13px; color: var(--muted); background: var(--bg-2);
+      border-radius: 9px; padding: 12px 14px; margin-top: 12px; line-height: 1.5;
     }
-    .trail { margin-top: 8px; }
-    .station { display: grid; grid-template-columns: 28px 1fr; gap: 0 14px; }
-    .rail { position: relative; }
+
+    /* ---------- trail ---------- */
+    .trail { margin-top: 20px; }
+    .station { display: grid; grid-template-columns: 34px 1fr; gap: 0 16px; }
+    /* Grid and flex children default to min-width:auto, so one long hash would make
+       the whole page wider than a phone screen instead of wrapping. */
+    .station > div, .panel, .verdict, .why, .box { min-width: 0; }
     .num {
-      width: 28px; height: 28px; border-radius: 50%;
+      width: 34px; height: 34px; border-radius: 50%;
       display: grid; place-items: center;
-      font: 600 12px Inter, sans-serif; border: 1.5px solid var(--line);
-      background: var(--card); color: var(--muted); position: relative; z-index: 1;
+      font: 600 14px Inter, sans-serif; border: 2px solid var(--line);
+      background: var(--card); color: var(--faint); position: relative; z-index: 1;
     }
-    .station.ok .num { border-color: var(--ok); color: var(--ok); }
+    .station.ok .num { border-color: var(--ok); color: var(--ok); background: var(--ok-bg); }
     .station.run .num { border-color: currentColor; color: inherit; }
     .station.err .num { border-color: var(--red); color: var(--red); }
     .station[data-tone="amber"] { color: var(--amber); }
     .station[data-tone="violet"] { color: var(--violet); }
     .station[data-tone="teal"] { color: var(--teal); }
-    .head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
-    .name { font-size: 13px; font-weight: 600; letter-spacing: .06em; color: var(--ink); }
-    .status { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .head { display: flex; justify-content: space-between; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+    .name { font-size: 14px; font-weight: 700; letter-spacing: .07em; color: var(--ink); }
+    .status { font-size: 13px; color: var(--faint); font-variant-numeric: tabular-nums; white-space: nowrap; }
     .station.ok .status { color: var(--ok); }
     .station.run .status { color: inherit; }
     .station.err .status { color: var(--red); }
-    .body { color: var(--ink); font-size: 13.5px; margin: 8px 0 4px; }
-    .body p { margin: 0 0 4px; }
-    .mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12px; }
-    .hash {
-      font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12px;
-      cursor: copy; border-bottom: 1px dashed var(--line);
+    .what {
+      font-size: 13.5px; color: var(--muted); margin: 3px 0 0; max-width: 64ch;
     }
-    .src { font-size: 11px; color: var(--muted); }
+    .body { color: var(--ink); font-size: 14px; margin: 10px 0 4px; }
+    .body p { margin: 0 0 5px; }
+    .local-note {
+      font-size: 12.5px; color: var(--muted); background: var(--bg-2);
+      border-radius: 8px; padding: 8px 11px; margin: 8px 0 2px; max-width: 62ch;
+    }
+    .hash {
+      font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 13px;
+      cursor: copy; border-bottom: 1px dashed var(--line-2);
+    }
+    .hash:hover { border-bottom-style: solid; }
+    .src { font-size: 12px; color: var(--faint); margin-top: 6px; }
+    /* Hashes, addresses and endpoint URLs are single unbreakable tokens; without this
+       they set the width of the whole page on a phone. */
+    .src, .hash, .mono, .why .val, table.relays td { overflow-wrap: anywhere; }
+    .body p, .what, .verdict p, .why p, .note, .sub, .sec-lede { overflow-wrap: break-word; }
     a.vlink {
       color: inherit; text-decoration: none; border-bottom: 1px solid currentColor;
-      font-size: 12.5px;
+      font-size: 13.5px; font-weight: 500;
     }
     .connector {
-      position: relative; min-height: 52px; margin: 2px 0 2px 13px;
-      border-left: 1.5px solid var(--line); padding: 8px 0 8px 28px;
+      position: relative; min-height: 46px; margin: 3px 0 3px 16px;
+      border-left: 2px solid var(--line); padding: 9px 0 9px 32px;
     }
-    .connector span {
-      font-size: 11px; color: var(--muted); display: block; max-width: 42ch;
-    }
+    .connector span { font-size: 12.5px; color: var(--muted); display: block; max-width: 46ch; }
     .connector.running { border-left-color: currentColor; }
     .dot {
-      display: none; position: absolute; left: -5px; top: 0;
-      width: 8px; height: 8px; border-radius: 50%; background: currentColor;
+      display: none; position: absolute; left: -6px; top: 0;
+      width: 10px; height: 10px; border-radius: 50%; background: currentColor;
     }
     .connector.running .dot { display: block; animation: travel 1.15s linear infinite; }
-    @keyframes travel { from { top: 4px; } to { top: calc(100% - 10px); } }
-    .toast {
-      position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
-      background: var(--ink); color: var(--bg); font-size: 12px;
-      padding: 8px 12px; border-radius: 8px; opacity: 0; pointer-events: none;
-      transition: opacity .2s;
+    @keyframes travel { from { top: 4px; } to { top: calc(100% - 12px); } }
+
+    /* ---------- sync indicator ---------- */
+    .stats { display: flex; flex-wrap: wrap; gap: 26px 40px; margin-bottom: 20px; }
+    .stat .k { font-size: 11.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+    .stat .v {
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 27px; font-weight: 600; line-height: 1.15; margin-top: 3px;
+      font-variant-numeric: tabular-nums;
     }
-    .toast.show { opacity: 1; }
-    .arch { margin-top: 48px; }
-    .arch h2 { font-size: 13px; letter-spacing: .12em; font-weight: 600; }
-    .boxes { display: flex; flex-direction: column; gap: 0; margin-top: 14px; }
+    .stat .u { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+    .stat.gap .v { color: var(--amber); }
+
+    .scale { margin-top: 6px; }
+    .scale + .scale { margin-top: 22px; }
+    .scale .cap {
+      display: flex; justify-content: space-between; font-size: 12px; color: var(--muted);
+      margin-bottom: 6px; gap: 10px;
+    }
+    .bar {
+      display: flex; height: 22px; border-radius: 6px; overflow: hidden;
+      border: 1px solid var(--line); background: var(--bg-2);
+    }
+    .bar .known { background: var(--ok); }
+    .bar .unknown {
+      background: repeating-linear-gradient(
+        -45deg, var(--bg-2), var(--bg-2) 4px, var(--line-2) 4px, var(--line-2) 8px
+      );
+      min-width: 2px;
+    }
+    .legend { display: flex; gap: 20px; margin-top: 8px; font-size: 12.5px; color: var(--muted); flex-wrap: wrap; }
+    .legend i { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+    .legend .k1 { background: var(--ok); }
+    .legend .k2 { background: var(--line-2); }
+
+    .why {
+      margin-top: 20px; padding: 14px 16px; background: var(--warn-bg);
+      border-radius: 10px; font-size: 14px; line-height: 1.55;
+    }
+    .why .t { font-weight: 600; margin-bottom: 4px; }
+    .why .val { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 13px; }
+
+    /* ---------- checker ---------- */
+    .verdict { margin-top: 16px; padding: 15px 16px; border-radius: 10px; background: var(--bg-2); font-size: 14.5px; }
+    .verdict.found { background: var(--ok-bg); }
+    .verdict.newer { background: var(--warn-bg); }
+    .verdict .t { font-weight: 700; font-size: 15px; margin-bottom: 5px; }
+    .verdict p { margin: 0 0 6px; }
+    .verdict .big {
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 22px; font-weight: 600; margin: 8px 0 4px;
+    }
+    .examples { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+
+    /* ---------- proven ---------- */
+    .tscroll { overflow-x: auto; }
+    table.relays { width: 100%; border-collapse: collapse; font-size: 13.5px; table-layout: fixed; }
+    table.relays th {
+      text-align: left; font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase;
+      color: var(--muted); font-weight: 600; padding: 0 10px 8px 0; border-bottom: 1px solid var(--line);
+    }
+    table.relays td { padding: 10px 10px 10px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+    table.relays tr:last-child td { border-bottom: 0; }
+    .pill {
+      display: inline-block; font-size: 11.5px; font-weight: 600; padding: 2px 8px;
+      border-radius: 999px; white-space: nowrap;
+    }
+    .pill.yes { background: var(--ok-bg); color: var(--ok); }
+    .pill.unk { background: var(--bg-2); color: var(--muted); }
+
+    /* ---------- pipe ---------- */
+    .boxes { display: flex; flex-direction: column; gap: 0; }
     .box {
-      border: 1px solid var(--line); background: var(--card); border-radius: 10px;
-      padding: 12px 14px;
+      border: 1px solid var(--line); background: var(--card); border-radius: 11px;
+      padding: 13px 15px;
     }
-    .box strong { display: block; font-size: 13px; }
-    .box em { font-style: normal; font-size: 12px; color: var(--muted); }
-    .arrow { font-size: 11px; color: var(--muted); padding: 8px 8px 8px 18px; }
+    .box strong { display: block; font-size: 14px; }
+    .box em { font-style: normal; font-size: 13px; color: var(--muted); }
+    .arrow { font-size: 12px; color: var(--muted); padding: 9px 8px 9px 20px; }
+
     .json {
-      display: none; margin-top: 8px; background: var(--bg-2); border-radius: 8px;
-      padding: 10px; overflow: auto; max-height: 240px;
-      font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 11px;
+      display: none; margin-top: 10px; background: var(--bg-2); border-radius: 9px;
+      padding: 12px; overflow: auto; max-height: 260px;
+      font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12px;
       white-space: pre-wrap; word-break: break-all;
     }
     .json.open { display: block; }
+    .skel { color: var(--faint); font-size: 13.5px; }
+
+    .toast {
+      position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+      background: var(--ink); color: var(--bg); font-size: 13px;
+      padding: 9px 14px; border-radius: 9px; opacity: 0; pointer-events: none;
+      transition: opacity .2s;
+    }
+    .toast.show { opacity: 1; }
+
+    footer.foot {
+      margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--line);
+      font-size: 13px; color: var(--muted);
+    }
+    footer.foot a { color: var(--teal); }
+
+    @media (max-width: 640px) {
+      body { font-size: 15px; }
+      .wrap { padding: 22px 16px 70px; }
+      .claim { font-size: 22px; }
+      .stats { gap: 18px 28px; }
+      .stat .v { font-size: 23px; }
+      .station { grid-template-columns: 30px 1fr; gap: 0 12px; }
+      .num { width: 30px; height: 30px; font-size: 13px; }
+      .connector { margin-left: 14px; padding-left: 24px; }
+      .vout { flex: 1 1 96px; }
+      button.primary, button.ghost { width: 100%; }
+      table.relays .hide-sm { display: none; }
+    }
   </style>
 </head>
 <body>
@@ -174,44 +317,113 @@
       <button class="icon" id="gear" title="Creditcoin endpoints" aria-label="Settings">⚙</button>
     </header>
 
-    <div class="panel">
-      <div class="row">
-        <div class="grow">
-          <label for="txid">txid</label>
-          <input id="txid" type="text" spellcheck="false" autocomplete="off" />
-        </div>
-        <div class="vout">
-          <label for="vout">vout</label>
-          <input id="vout" type="number" min="0" step="1" />
-        </div>
-        <button class="primary" id="prove">Prove this UTXO</button>
-      </div>
-      <p class="note" id="modeNote">Read-only replay from live public RPCs. Nothing on this page is pre-recorded.</p>
-      <div class="settings" id="settings">
+    <h1 class="claim">Proving Bitcoin <em>without moving Bitcoin</em>.</h1>
+    <p class="sub">
+      A Creditcoin contract verifies that a Bitcoin UTXO exists and holds a given amount —
+      no wrapping, no bridge, no custodian. Every figure below is read live from a public
+      endpoint when this page loads. Nothing here is pre-recorded, and nothing is filled in
+      when a request fails.
+    </p>
+
+    <section style="margin-top:32px">
+      <h2 class="sec">THE WITNESS TRAIL</h2>
+      <p class="sec-lede">
+        One fact, followed across four chains. Each station is a separate request; the link on
+        each one opens an explorer we do not control, so the same hash can be checked elsewhere.
+      </p>
+
+      <div class="panel">
         <div class="row">
           <div class="grow">
-            <label for="ccRpc">Creditcoin RPC <span class="src">?ccRpc= · localStorage</span></label>
-            <input id="ccRpc" type="url" />
+            <label for="txid">Bitcoin txid</label>
+            <input id="txid" type="text" spellcheck="false" autocomplete="off" />
           </div>
-          <div class="grow">
-            <label for="proofApi">Proof API <span class="src">?proofApi= · localStorage</span></label>
-            <input id="proofApi" type="url" />
+          <div class="vout">
+            <label for="vout">vout</label>
+            <input id="vout" type="number" min="0" step="1" />
           </div>
+          <button class="primary" id="prove">Follow this UTXO</button>
         </div>
-        <p class="warn">
-          Creditcoin and the proof-gen API are a <b>local devnet on this machine</b>, not a public network.
-          <code class="mono">127.0.0.1</code> only works from a browser on the same host.
-          If you open this page from Vercel/Netlify/GitHub Pages, tunnel those two ports
-          (<span class="mono">cloudflared</span> / <span class="mono">ngrok</span>) and paste the public URLs here.
-          EOS and exSat endpoints are public and need no tunnel.
-        </p>
+        <p class="note" id="modeNote">Read-only replay from live public RPCs.</p>
+        <div class="settings" id="settings">
+          <div class="row">
+            <div class="grow">
+              <label for="ccRpc">Creditcoin RPC <span class="src" style="text-transform:none;letter-spacing:0">?ccRpc= · localStorage</span></label>
+              <input id="ccRpc" type="url" />
+            </div>
+            <div class="grow">
+              <label for="proofApi">Proof API <span class="src" style="text-transform:none;letter-spacing:0">?proofApi= · localStorage</span></label>
+              <input id="proofApi" type="url" />
+            </div>
+          </div>
+          <p class="warn">
+            Creditcoin and the proof-gen API run as a <b>local devnet on the author's machine</b>,
+            not a public network, because exSat is not a registered Attestcoin source chain on the
+            public network. <span class="mono">127.0.0.1</span> only resolves in a browser on that
+            same host. To reach them from a hosted copy of this page, tunnel the two ports
+            (<span class="mono">cloudflared</span>, <span class="mono">ngrok</span>) and paste the
+            public URLs here. EOS and exSat are public and need no tunnel.
+          </p>
+        </div>
       </div>
-    </div>
 
-    <div class="trail" id="trail"></div>
+      <div class="trail" id="trail"></div>
+    </section>
 
-    <section class="arch">
-      <h2>THE PIPE</h2>
+    <section id="syncSection">
+      <h2 class="sec">WHAT exSAT CURRENTLY KNOWS</h2>
+      <p class="sec-lede">
+        exSat's Bitcoin index has stopped advancing. That is a boundary on what can be proven,
+        not a failure of the pipeline — so the page states where the boundary is rather than
+        working around it.
+      </p>
+      <div class="panel" id="syncPanel">
+        <p class="skel" id="syncSkel">reading utxomng.xsat and Bitcoin's tip…</p>
+        <div id="syncBody" style="display:none"></div>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="sec">CHECK ANY UTXO YOURSELF</h2>
+      <p class="sec-lede">
+        This reads exSat's index on EOS mainnet directly. It is public data, so it works from
+        your machine with no access to ours — the one part of this page nobody has to take on trust.
+      </p>
+      <div class="panel">
+        <div class="row">
+          <div class="grow">
+            <label for="ctxid">Bitcoin txid</label>
+            <input id="ctxid" type="text" spellcheck="false" autocomplete="off" placeholder="64 hex characters" />
+          </div>
+          <div class="vout">
+            <label for="cvout">vout</label>
+            <input id="cvout" type="number" min="0" step="1" value="0" />
+          </div>
+          <button class="primary" id="checkBtn">Look it up</button>
+        </div>
+        <div class="examples">
+          <button class="ghost" id="exKnown">Try a 2009 coinbase (50 BTC)</button>
+          <button class="ghost" id="exRecent">Try a transaction from today</button>
+        </div>
+        <div id="checkOut"></div>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="sec">WHAT HAS ACTUALLY BEEN RELAYED</h2>
+      <p class="sec-lede">
+        Every relay this project has ever made, read live from the receiver contract's logs on
+        exSat EVM. Nothing in this table is written into the page.
+      </p>
+      <div class="panel">
+        <p class="skel" id="provenSkel">reading logs from the receiver on exSat EVM…</p>
+        <div id="provenBody" style="display:none"></div>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="sec">THE PIPE</h2>
+      <p class="sec-lede">Four hops, and only the first one involves Bitcoin itself.</p>
       <div class="boxes">
         <div class="box"><strong>① Bitcoin UTXO</strong><em>the fact — value, unspent — as of the indexed height</em></div>
         <div class="arrow">↓ multi_index read · same chain · no permission needed</div>
@@ -221,18 +433,32 @@
         <div class="arrow">↓ attestation · BLS quorum</div>
         <div class="box"><strong>④ Attestcoin</strong><em>header hash of an exSat block, quorum-signed</em></div>
         <div class="arrow">↓ BlockProver precompile · on-chain verification</div>
-        <div class="box"><strong>⑤ Creditcoin</strong><em>BitcoinFactVerifier records the fact — only if the relayer topic is btcwitness</em></div>
+        <div class="box"><strong>⑤ Creditcoin</strong><em>BitcoinFactVerifier records the fact — only if the relayer topic is btcwitness11</em></div>
       </div>
     </section>
+
+    <footer class="foot">
+      <p>
+        What this does not do: it does not validate Bitcoin headers itself. It inherits exSat's
+        consensus over Bitcoin — proof of work plus exSat's validator set — which is the same
+        assumption exSat's own users already make. What it removes is discretionary trust: there
+        is no custodian who could report a balance that is not there.
+      </p>
+    </footer>
   </div>
   <div class="toast" id="toast"></div>
 
   <script>
     const CFG = {
       EOS_RPCS: ["https://eos.greymass.com", "https://eos.api.eosnation.io"],
-      EOS_EXPLORER: "https://bloks.io",
+      // bloks.io returns 403 as of 2026-09-02. blocksfinity serves accounts, unicove
+      // (Vaulta's own explorer) serves transactions; both were checked against a real
+      // relay before being linked here.
+      EOS_ACCOUNT_EXPLORER: "https://www.blocksfinity.com/account/info/",
+      EOS_TX_EXPLORER: "https://unicove.com/en/eos/transaction/",
       HYPERION: "https://eos.hyperion.eosrio.io",
       UTXOMNG: "utxomng.xsat",
+      BLKENDT: "blkendt.xsat",
       BTCWITNESS: "btcwitness11",
       RELAYER: "0xBbbbBbbBBBbbBBbbbbBBbbBB3E51C7666ac60210",
       EXSAT_RPC: "https://evm.exsat.network",
@@ -244,17 +470,18 @@
       // with genesis 59791700 so the blocks this demo proves are actually reachable.
       EXSAT_CHAIN_KEY: 8,
       RECEIVER: "0xBF823785C5749532AE927d7285093Eae279fe16C",
-      RECEIVER_DEPLOY_TX: "0xcf491cdeb348d40aa3ece17a9d668b37ddf1ff9af216c3bb950e402b0ed9af1d",
-      NATIVE_DEPLOY_TX: "18f6fc136895398a06fe0babaad81913653765421386e143081a2792084f6086",
+      NATIVE_DEPLOY_TX: "6d563fadb639e80aab743af0c54f6075430c2cdd8ed138772602f6c0cdcaeec6",
       VERIFIER: "0x3ed62137c5DB927cb137c26455969116BF0c23Cb",
       CHAIN_INFO: "0x0000000000000000000000000000000000000fd3",
       ATTESTOR: "5CB4odFpzLL7MFFcr12VX18YgEvJegpXkdvkeYun77hUKtc5",
       ATTESTATION_HEIGHT: 59791700,
+      ATTESTATION_HEADER: "0xe47664ed9713c33aeb7397b002a8ad021e48ce4ec625368846aa6b8621953ff6",
       ATTESTATION_DIGEST: "0x533cad0c17ee3f709c9be6274755b62b77022e4bb52c94a3cb2a9ee0955206ce",
       KNOWN: {
         txid: "e1afd89295b68bc5247fe0ca2885dd4b8818d7ce430faa615067d7bab8640156",
         index: 0
       },
+      BTC_APIS: ["https://blockstream.info/api", "https://mempool.space/api"],
       RECEIVER_ABI: [
         "event BitcoinUtxoAttested(bytes32 indexed txid, uint32 index, uint64 value, address indexed relayer_)",
         "function relayer() view returns (address)"
@@ -263,28 +490,38 @@
         "function getProvenValue(bytes32 txid, uint32 index) view returns (uint64 value, uint64 sourceHeight, uint64 provenAt, bool proven)",
         "function expectedRelayer() view returns (address)",
         "function expectedEmitter() view returns (address)",
-        "function exsatChainKey() view returns (uint64)",
-        "event BitcoinFactProven(bytes32 indexed txid, uint32 index, uint64 value, uint64 height)"
+        "function exsatChainKey() view returns (uint64)"
       ],
       CHAININFO_ABI: [
         "function get_latest_attestation_height_and_hash(uint64 chainKey) view returns (tuple(uint64 height, bytes32 hash, bool isAttestation, bool exists))",
         "function get_attestation_height_for_digest(uint64 chainKey, bytes32 digest) view returns (tuple(uint64 height, bool exists))",
-        "function is_height_attested(uint64 chainKey, uint64 targetHeight) view returns (bool)",
-        "function get_chain_by_key(uint64 chainKey) view returns (tuple(tuple(uint64 chainKey, uint64 chainId, bytes chainName, uint8 chainEncoding) info, bool exists))"
+        "function is_height_attested(uint64 chainKey, uint64 targetHeight) view returns (bool)"
       ]
     };
 
     const HOPS = [
-      { id: "btc", n: "①", name: "BITCOIN", tone: "amber",
+      { id: "btc", n: "1", name: "BITCOIN", tone: "amber",
+        what: "The fact itself: one unspent output, read out of exSat's on-chain copy of the UTXO set.",
         next: "multi_index read · same chain · no permission needed" },
-      { id: "eos", n: "②", name: "exSAT NATIVE (EOS mainnet)", tone: "violet",
+      { id: "eos", n: "2", name: "exSAT NATIVE · EOS MAINNET", tone: "violet",
+        what: "Our contract reads that row and hands it to the EVM layer through an inline action. Same chain, so nothing is bridged.",
         next: "inline action · same chain · not a bridge" },
-      { id: "evm", n: "③", name: "exSAT EVM (chain 7200)", tone: "violet",
+      { id: "evm", n: "3", name: "exSAT EVM · CHAIN 7200", tone: "violet",
+        what: "The receiver emits an event carrying the UTXO and the identity of who relayed it. That event is what Attestcoin can prove.",
         next: "attestation · BLS quorum" },
-      { id: "atc", n: "④", name: "ATTESTCOIN", tone: "teal",
+      { id: "atc", n: "4", name: "ATTESTCOIN", tone: "teal",
+        what: "Attestors sign the header hash of the exSat block holding that event, and the signature lands on Creditcoin.",
+        local: true,
         next: "BlockProver precompile · on-chain verification" },
-      { id: "cc", n: "⑤", name: "CREDITCOIN", tone: "teal" }
+      { id: "cc", n: "5", name: "CREDITCOIN", tone: "teal",
+        what: "A Creditcoin contract checks the proof against the attested header and records the Bitcoin fact — but only if the relayer in the event is ours.",
+        local: true }
     ];
+
+    const LOCAL_NOTE =
+      "Reads the Creditcoin devnet on the author's machine. If you are not on that machine this " +
+      "station will report unreachable, which is the honest result — the recorded demo shows this " +
+      "step running live, and ⚙ accepts a tunnel URL.";
 
     const $ = (id) => document.getElementById(id);
     const params = new URLSearchParams(location.search);
@@ -292,9 +529,7 @@
     function loadSetting(key, fallback) {
       return params.get(key) || localStorage.getItem("bw." + key) || fallback;
     }
-    function persistSetting(key, value) {
-      localStorage.setItem("bw." + key, value);
-    }
+    function persistSetting(key, value) { localStorage.setItem("bw." + key, value); }
 
     $("ccRpc").value = loadSetting("ccRpc", "http://127.0.0.1:9944");
     $("proofApi").value = loadSetting("proofApi", "http://127.0.0.1:3100");
@@ -312,16 +547,16 @@
       setTimeout(() => el.classList.remove("show"), 1400);
     }
 
-    function mid(hex, keep = 6) {
+    function mid(hex, keep = 8) {
       const s = String(hex || "");
       if (s.length <= keep * 2 + 1) return s;
       return s.slice(0, keep) + "…" + s.slice(-keep);
     }
-    function hashEl(value) {
+    function hashEl(value, keep) {
       const span = document.createElement("span");
       span.className = "hash";
       span.title = "click to copy";
-      span.textContent = mid(value);
+      span.textContent = mid(value, keep);
       span.onclick = () => { navigator.clipboard.writeText(value); toast("copied"); };
       return span;
     }
@@ -330,6 +565,38 @@
       return `${n.toLocaleString("en-US")} sats (${Number(n) / 1e8} BTC)`;
     }
     function fmtN(n) { return Number(n).toLocaleString("en-US"); }
+    function el(tag, cls, text) {
+      const e = document.createElement(tag);
+      if (cls) e.className = cls;
+      if (text != null) e.textContent = text;
+      return e;
+    }
+    function p(html) { const e = document.createElement("p"); e.innerHTML = html; return e; }
+    function line(parts) {
+      const e = document.createElement("p");
+      parts.forEach((part) => {
+        if (typeof part === "string") e.appendChild(document.createTextNode(part));
+        else e.appendChild(part);
+      });
+      return e;
+    }
+    function vlink(href, text) {
+      const a = document.createElement("a");
+      a.className = "vlink";
+      a.href = href; a.target = "_blank"; a.rel = "noopener noreferrer";
+      a.textContent = text;
+      return a;
+    }
+    function src(text) { return el("p", "src", text); }
+
+    /* Blocks are ~10 minutes apart; good enough to turn a block gap into human time. */
+    function blocksToHuman(blocks) {
+      const mins = blocks * 10;
+      const days = mins / (60 * 24);
+      if (days < 1) return `${Math.round(mins / 60)} hours`;
+      if (days < 14) return `${Math.round(days)} days`;
+      return `about ${Math.round(days / 7)} weeks`;
+    }
 
     async function sha256Hex(bytes) {
       const buf = await crypto.subtle.digest("SHA-256", bytes);
@@ -344,10 +611,10 @@
     async function computeUtxoId(txid, index) {
       const raw = new Uint8Array(36);
       raw.set(hexToBytes(txid), 0);
-      const view = new DataView(raw.buffer);
-      view.setUint32(32, Number(index), true);
+      new DataView(raw.buffer).setUint32(32, Number(index), true);
       return sha256Hex(raw);
     }
+    function isTxid(s) { return /^[0-9a-f]{64}$/.test(s); }
 
     async function fetchTimeout(url, opts, ms, label) {
       const ctrl = new AbortController();
@@ -386,13 +653,55 @@
       }
       throw last;
     }
+    function tableRows(code, scope, table, extra) {
+      return eosPost("/v1/chain/get_table_rows",
+        { json: true, code, scope, table, limit: 1, ...(extra || {}) });
+    }
+
+    let btcApi = CFG.BTC_APIS[0];
+    async function btcGet(path) {
+      let last;
+      for (const base of [btcApi, ...CFG.BTC_APIS.filter((u) => u !== btcApi)]) {
+        try {
+          const res = await fetchTimeout(base + path, {}, 8000, base);
+          if (res.status === 404) { btcApi = base; return null; }
+          if (!res.ok) throw new Error(base + " " + res.status);
+          btcApi = base;
+          return res;
+        } catch (e) { last = e; }
+      }
+      throw last;
+    }
+    async function btcTip() {
+      const r = await btcGet("/blocks/tip/height");
+      return r ? Number(await r.text()) : null;
+    }
+    async function btcTx(txid) {
+      const r = await btcGet("/tx/" + txid);
+      return r ? r.json() : null;
+    }
+
+    async function readChainstate() {
+      const res = await tableRows(CFG.UTXOMNG, CFG.UTXOMNG, "chainstate");
+      const row = res.rows?.[0];
+      if (!row) throw new Error("utxomng.xsat returned no chainstate row");
+      return row;
+    }
+    async function findUtxo(txid, index) {
+      const utxoId = await computeUtxoId(txid, index);
+      const res = await tableRows(CFG.UTXOMNG, CFG.UTXOMNG, "utxos", {
+        index_position: 3, key_type: "sha256", lower_bound: utxoId, upper_bound: utxoId
+      });
+      return { utxoId, row: res.rows?.[0] || null };
+    }
+
+    /* =====================  the trail  ===================== */
 
     function renderTrail() {
       const root = $("trail");
       root.innerHTML = "";
-      HOPS.forEach((h, i) => {
-        const st = document.createElement("div");
-        st.className = "station";
+      HOPS.forEach((h) => {
+        const st = el("div", "station");
         st.dataset.tone = h.tone;
         st.id = "st-" + h.id;
         st.innerHTML = `
@@ -402,12 +711,13 @@
               <div class="name">${h.name}</div>
               <div class="status" id="st-${h.id}-status">pending</div>
             </div>
+            <p class="what">${h.what}</p>
+            ${h.local ? `<p class="local-note">${LOCAL_NOTE}</p>` : ""}
             <div class="body" id="st-${h.id}-body"><p class="src">waiting</p></div>
           </div>`;
         root.appendChild(st);
         if (h.next) {
-          const c = document.createElement("div");
-          c.className = "connector";
+          const c = el("div", "connector");
           c.dataset.tone = h.tone;
           c.id = "cn-" + h.id;
           c.innerHTML = `<i class="dot"></i><span>${h.next}</span>`;
@@ -418,17 +728,17 @@
     renderTrail();
 
     function setStation(id, state, elapsedMs) {
-      const el = $("st-" + id);
-      el.classList.remove("ok", "run", "err");
+      const st = $("st-" + id);
+      st.classList.remove("ok", "run", "err");
       const status = $("st-" + id + "-status");
       if (state === "running") {
-        el.classList.add("run");
+        st.classList.add("run");
         status.textContent = elapsedMs != null ? (elapsedMs / 1000).toFixed(1) + " s" : "running";
       } else if (state === "ok") {
-        el.classList.add("ok");
+        st.classList.add("ok");
         status.textContent = "✓ " + (elapsedMs / 1000).toFixed(1) + " s";
       } else if (state === "err") {
-        el.classList.add("err");
+        st.classList.add("err");
         status.textContent = elapsedMs != null ? "✗ " + (elapsedMs / 1000).toFixed(1) + " s" : "✗";
       } else {
         status.textContent = "pending";
@@ -439,52 +749,36 @@
       body.innerHTML = "";
       nodes.forEach((n) => body.appendChild(n));
     }
-    function p(html) {
-      const el = document.createElement("p");
-      el.innerHTML = html;
-      return el;
-    }
-    function line(parts) {
-      const el = document.createElement("p");
-      parts.forEach((part) => {
-        if (typeof part === "string") el.appendChild(document.createTextNode(part));
-        else el.appendChild(part);
-      });
-      return el;
-    }
-    function vlink(href, text) {
-      const a = document.createElement("a");
-      a.className = "vlink";
-      a.href = href;
-      a.target = "_blank";
-      a.rel = "noopener noreferrer";
-      a.textContent = text;
-      return a;
-    }
-    function src(text) {
-      const el = document.createElement("p");
-      el.className = "src";
-      el.textContent = text;
-      return el;
+    function timer(id, hopId) {
+      const t0 = performance.now();
+      const cn = hopId ? $("cn-" + hopId) : null;
+      if (cn) cn.classList.add("running");
+      setStation(id, "running", 0);
+      const iv = setInterval(() => setStation(id, "running", performance.now() - t0), 100);
+      return {
+        stop(state) {
+          clearInterval(iv);
+          if (cn) cn.classList.remove("running");
+          setStation(id, state, performance.now() - t0);
+        }
+      };
     }
 
     let runToken = 0;
 
-    async function runTrail(txid, index, { historical }) {
+    async function runTrail(txid, index) {
       const token = ++runToken;
-      const clean = txid.replace(/^0x/, "").toLowerCase();
+      const clean = String(txid).replace(/^0x/, "").toLowerCase();
       $("prove").disabled = true;
-      $("modeNote").textContent = historical
-        ? "Historical replay · every number below is being read now from a public endpoint."
-        : "Live prove · reads only. The relay key never enters this page.";
+      $("modeNote").textContent =
+        "Reading now from public RPCs — EOS mainnet, exSat EVM, Bitcoin — plus the Creditcoin devnet for ④ and ⑤.";
       renderTrail();
 
-      const ctx = { txid: clean, index: Number(index), event: null, utxo: null, state: null };
+      const ctx = { txid: clean, index: Number(index) || 0 };
 
       await stepBtc(ctx, token);
       if (token !== runToken) return;
       if (!ctx.utxo) { $("prove").disabled = false; return; }
-
       await stepEos(ctx, token);
       if (token !== runToken) return;
       await stepEvm(ctx, token);
@@ -495,74 +789,52 @@
       $("prove").disabled = false;
     }
 
-    function timer(id, hopId) {
-      const t0 = performance.now();
-      const cn = hopId ? $("cn-" + hopId) : null;
-      if (cn) cn.classList.add("running");
-      setStation(id, "running", 0);
-      const iv = setInterval(() => setStation(id, "running", performance.now() - t0), 100);
-      return {
-        ms: () => performance.now() - t0,
-        stop(state) {
-          clearInterval(iv);
-          if (cn) cn.classList.remove("running");
-          setStation(id, state, performance.now() - t0);
-        }
-      };
-    }
-
     async function stepBtc(ctx, token) {
       const t = timer("btc");
       try {
-        const [stateRes, tipRes] = await Promise.all([
-          eosPost("/v1/chain/get_table_rows", {
-            json: true, code: CFG.UTXOMNG, scope: CFG.UTXOMNG, table: "chainstate", limit: 1
-          }),
-          fetch("https://blockstream.info/api/blocks/tip/height").then((r) => r.ok ? r.text() : null).catch(() => null)
+        const [state, tip] = await Promise.all([
+          readChainstate(),
+          btcTip().catch(() => null)
         ]);
-        ctx.state = stateRes.rows?.[0];
-        const height = Number(ctx.state?.head_height ?? 0);
-        const count = Number(ctx.state?.num_utxos ?? 0);
-        const utxoId = await computeUtxoId(ctx.txid, ctx.index);
-        const { rows } = await eosPost("/v1/chain/get_table_rows", {
-          json: true, code: CFG.UTXOMNG, scope: CFG.UTXOMNG, table: "utxos",
-          index_position: 3, key_type: "sha256",
-          lower_bound: utxoId, upper_bound: utxoId, limit: 1
-        });
+        ctx.state = state;
+        const height = Number(state.parsed_height ?? state.head_height ?? 0);
+        const count = Number(state.num_utxos ?? 0);
+        const { utxoId, row } = await findUtxo(ctx.txid, ctx.index);
         if (token !== runToken) return;
-        if (!rows?.length) {
+
+        if (!row) {
           t.stop("err");
-          const btn = document.createElement("button");
-          btn.className = "linkish";
-          btn.textContent = "try a known-good UTXO";
+          const btn = el("button", "linkish", "load a UTXO that is in the set");
           btn.onclick = () => {
             $("txid").value = CFG.KNOWN.txid;
             $("vout").value = CFG.KNOWN.index;
-            runTrail(CFG.KNOWN.txid, CFG.KNOWN.index, { historical: true });
+            runTrail(CFG.KNOWN.txid, CFG.KNOWN.index);
           };
           setBody("btc", [
-            p(`not in the set at height ${fmtN(height)}`),
-            p(`${fmtN(count)} UTXOs indexed · spent, never existed, or above this height.`),
-            src(`GET table utxos @ ${eosRpc}`),
+            p(`Not in the set at height ${fmtN(height)}.`),
+            p(`${fmtN(count)} outputs indexed — this one is spent, never existed, or belongs to a block above the index.`),
+            p(`The lookup panel below tells those three apart.`),
+            src(`POST ${eosRpc}/v1/chain/get_table_rows · table utxos · index byutxoid`),
             btn
           ]);
           return;
         }
-        ctx.utxo = rows[0];
+        ctx.utxo = row;
         ctx.utxoId = utxoId;
         t.stop("ok");
-        const tip = tipRes ? Number(tipRes) : null;
         const lag = tip != null ? tip - height : null;
         setBody("btc", [
-          p(`indexed to height ${fmtN(height)} · ${fmtN(count)} UTXOs`),
-          p(`value ${fmtSats(ctx.utxo.value)}`),
+          p(`<b>${fmtSats(row.value)}</b>, unspent as of Bitcoin height ${fmtN(height)}.`),
+          p(`${fmtN(count)} outputs in exSat's copy of the set.`),
           line(["utxo_id ", hashEl(utxoId)]),
           line([
-            vlink("https://mempool.space/tx/" + ctx.txid, "↗ verify on mempool.space"),
+            vlink(CFG.BTC_APIS[1].replace("/api", "") + "/tx/" + ctx.txid, "↗ the transaction on mempool.space"),
             document.createTextNode("  ·  "),
-            vlink(CFG.EOS_EXPLORER + "/account/" + CFG.UTXOMNG, "↗ utxomng.xsat on bloks.io")
+            vlink(CFG.EOS_ACCOUNT_EXPLORER + CFG.UTXOMNG, "↗ utxomng.xsat on blocksfinity")
           ]),
-          src(`POST ${eosRpc}/v1/chain/get_table_rows  ·  index byutxoid (pos 3)${lag != null ? "  ·  Bitcoin tip " + fmtN(tip) + " (" + fmtN(lag) + " blocks ahead of the index)" : ""}`)
+          src(lag != null
+            ? `Bitcoin's tip is ${fmtN(tip)} — the index is ${fmtN(lag)} blocks behind, so this is true as of ${fmtN(height)}, not as of today.`
+            : `Read from exSat's index at height ${fmtN(height)}.`)
         ]);
       } catch (e) {
         t.stop("err");
@@ -585,28 +857,32 @@
               return tx === ctx.txid && Number(d.index) === ctx.index;
             });
           }
-        } catch (_) { /* history is optional; EVM logs are the source of truth for hop 3 */ }
-
+        } catch (_) { /* history is optional; the EVM log is the source of truth for hop ③ */ }
         if (token !== runToken) return;
+
         if (actions.length) {
           const a = actions[0];
           ctx.antelopeTx = a.trx_id;
           t.stop("ok");
           setBody("eos", [
-            p("btcwitness::relayutxo → inline action → evm.xsat"),
+            p("btcwitness11::relayutxo ran, and passed the fact to evm.xsat in the same transaction."),
             line(["antelope tx ", hashEl(a.trx_id)]),
-            vlink(CFG.EOS_EXPLORER + "/transaction/" + a.trx_id, "↗ verify on bloks.io"),
-            src(`GET ${CFG.HYPERION}/v2/history/get_actions`)
+            vlink(CFG.EOS_TX_EXPLORER + a.trx_id, "↗ the transaction on unicove"),
+            src(`GET ${CFG.HYPERION}/v2/history/get_actions · account ${CFG.BTCWITNESS}`)
           ]);
           return;
         }
         t.stop("err");
         setBody("eos", [
-          p("not yet relayed — ask the operator to run the relay."),
-          p("The native contract is deployed. This page will never hold btcwitness11's key."),
+          p("This UTXO has not been relayed. Relaying costs EOS resources and needs the account key, which this page will never hold."),
+          p("The contract itself is deployed and its code is on chain:"),
           line(["setcode tx ", hashEl(CFG.NATIVE_DEPLOY_TX)]),
-          vlink(CFG.EOS_EXPLORER + "/transaction/" + CFG.NATIVE_DEPLOY_TX, "↗ verify deploy on bloks.io"),
-          src(`account ${CFG.BTCWITNESS} · filter relayutxo · ${CFG.HYPERION}`)
+          line([
+            vlink(CFG.EOS_TX_EXPLORER + CFG.NATIVE_DEPLOY_TX, "↗ the deploy on unicove"),
+            document.createTextNode("  ·  "),
+            vlink(CFG.EOS_ACCOUNT_EXPLORER + CFG.BTCWITNESS, "↗ btcwitness11 on blocksfinity")
+          ]),
+          src(`No relayutxo action for this txid · ${CFG.HYPERION}`)
         ]);
       } catch (e) {
         t.stop("err");
@@ -614,49 +890,56 @@
       }
     }
 
+    async function evmProvider() {
+      return new ethers.JsonRpcProvider(CFG.EXSAT_RPC, CFG.EXSAT_CHAIN_ID, { staticNetwork: true });
+    }
+    async function receiverLogs(provider, filter) {
+      const receiver = new ethers.Contract(CFG.RECEIVER, CFG.RECEIVER_ABI, provider);
+      try {
+        return { receiver, logs: await receiver.queryFilter(filter, 0, "latest") };
+      } catch (_) {
+        const head = await provider.getBlockNumber();
+        return { receiver, logs: await receiver.queryFilter(filter, Math.max(0, head - 200_000), head) };
+      }
+    }
+
     async function stepEvm(ctx, token) {
       const t = timer("evm", "eos");
       try {
-        const provider = new ethers.JsonRpcProvider(CFG.EXSAT_RPC, CFG.EXSAT_CHAIN_ID, { staticNetwork: true });
+        const provider = await evmProvider();
+        const topicTxid = "0x" + ctx.txid.padStart(64, "0");
         const receiver = new ethers.Contract(CFG.RECEIVER, CFG.RECEIVER_ABI, provider);
         const onchainRelayer = await receiver.relayer();
-        const topicTxid = "0x" + ctx.txid.padStart(64, "0");
-        let logs = [];
-        try {
-          logs = await receiver.queryFilter(receiver.filters.BitcoinUtxoAttested(topicTxid), 0, "latest");
-        } catch (_) {
-          const head = await provider.getBlockNumber();
-          logs = await receiver.queryFilter(receiver.filters.BitcoinUtxoAttested(topicTxid), Math.max(0, head - 50_000), head);
-        }
+        const { logs } = await receiverLogs(provider, receiver.filters.BitcoinUtxoAttested(topicTxid));
         if (token !== runToken) return;
+
         if (!logs.length) {
           t.stop("err");
           setBody("evm", [
-            p("no BitcoinUtxoAttested for this UTXO."),
+            p("No BitcoinUtxoAttested event carries this UTXO."),
             line(["receiver ", hashEl(CFG.RECEIVER)]),
-            line(["relayer() ", hashEl(onchainRelayer)]),
-            vlink(CFG.EXSAT_EXPLORER + "/address/" + CFG.RECEIVER, "↗ verify on scan.exsat.network"),
-            src(`${CFG.EXSAT_RPC}  ·  chainId ${CFG.EXSAT_CHAIN_ID}`)
+            line(["its relayer() ", hashEl(onchainRelayer)]),
+            vlink(CFG.EXSAT_EXPLORER + "/address/" + CFG.RECEIVER, "↗ the receiver on scan.exsat.network"),
+            src(`${CFG.EXSAT_RPC} · chainId ${CFG.EXSAT_CHAIN_ID}`)
           ]);
           return;
         }
         const log = logs[logs.length - 1];
         ctx.event = log;
-        const relayerTopic = ethers.hexlify(log.topics[2]);
-        const relayerAddr = ethers.getAddress("0x" + relayerTopic.slice(26));
+        const relayerAddr = ethers.getAddress("0x" + ethers.hexlify(log.topics[2]).slice(26));
+        ctx.relayerOk = relayerAddr.toLowerCase() === CFG.RELAYER.toLowerCase();
         t.stop("ok");
         setBody("evm", [
-          p(`BitcoinUtxoAttested emitted · block ${fmtN(log.blockNumber)}`),
-          line(["topics[1]=txid ", hashEl(log.topics[1])]),
-          line(["topics[2]=relayer ", hashEl(relayerAddr)]),
+          p(`Event emitted in block ${fmtN(log.blockNumber)}.`),
+          line(["topics[1] = txid ", hashEl(log.topics[1])]),
+          line(["topics[2] = relayer ", hashEl(relayerAddr), document.createTextNode(ctx.relayerOk ? "  ✓ ours" : "  ✗ not ours")]),
           line(["evm tx ", hashEl(log.transactionHash)]),
-          vlink(CFG.EXSAT_EXPLORER + "/tx/" + log.transactionHash, "↗ verify on scan.exsat.network"),
-          src(`${CFG.EXSAT_RPC}  ·  receiver ${CFG.RECEIVER}`)
+          vlink(CFG.EXSAT_EXPLORER + "/tx/" + log.transactionHash, "↗ the transaction on scan.exsat.network"),
+          src(`${CFG.EXSAT_RPC} · receiver ${CFG.RECEIVER}`)
         ]);
-        ctx.relayerOk = relayerAddr.toLowerCase() === CFG.RELAYER.toLowerCase();
       } catch (e) {
         t.stop("err");
-        setBody("evm", [p(String(e.message || e)), src(CFG.EXSAT_RPC)]);
+        setBody("evm", [p(String(e.shortMessage || e.message || e)), src(CFG.EXSAT_RPC)]);
       }
     }
 
@@ -664,13 +947,11 @@
       const t = timer("atc", "evm");
       const need = ctx.event ? Number(ctx.event.blockNumber) : CFG.ATTESTATION_HEIGHT;
       try {
-        const exsat = new ethers.JsonRpcProvider(CFG.EXSAT_RPC, CFG.EXSAT_CHAIN_ID, { staticNetwork: true });
-        const header = await exsat.getBlock(CFG.ATTESTATION_HEIGHT);
-        const headerOk = header && header.hash.toLowerCase() === "0xe47664ed9713c33aeb7397b002a8ad021e48ce4ec625368846aa6b8621953ff6";
+        const exsat = await evmProvider();
+        const header = await exsat.getBlock(CFG.ATTESTATION_HEIGHT).catch(() => null);
+        const headerOk = header && header.hash.toLowerCase() === CFG.ATTESTATION_HEADER;
 
-        let attested = null;
-        let digestHeight = null;
-        let ccErr = null;
+        let attested = null, digestHeight = null, ccErr = null;
         const ccUrl = $("ccRpc").value.trim();
         try {
           await ccPing(ccUrl);
@@ -678,49 +959,46 @@
           const info = new ethers.Contract(CFG.CHAIN_INFO, CFG.CHAININFO_ABI, cc);
           attested = await info.get_latest_attestation_height_and_hash(CFG.EXSAT_CHAIN_KEY);
           digestHeight = await info.get_attestation_height_for_digest(CFG.EXSAT_CHAIN_KEY, CFG.ATTESTATION_DIGEST);
-        } catch (e) {
-          ccErr = e;
-        }
+        } catch (e) { ccErr = e; }
         if (token !== runToken) return;
+
+        const headerLine = line([
+          `exSat header at ${fmtN(CFG.ATTESTATION_HEIGHT)} `,
+          hashEl(header?.hash || "—"),
+          document.createTextNode(headerOk ? "  ✓ matches the attested digest's block" : "")
+        ]);
 
         if (ccErr) {
           t.stop("err");
           setBody("atc", [
-            p(`attested height unknown · need ${fmtN(need)}`),
-            p("Creditcoin RPC is not reachable from this browser."),
-            line(["digest ", hashEl(CFG.ATTESTATION_DIGEST)]),
-            line([
-              `header ${CFG.ATTESTATION_HEIGHT} `,
-              hashEl(header?.hash || "—"),
-              document.createTextNode(headerOk ? "  matches exSat RPC  ✓" : "  mismatch")
-            ]),
-            vlink(CFG.EXSAT_EXPLORER + "/block/" + CFG.ATTESTATION_HEIGHT, "↗ verify header on scan.exsat.network"),
-            src(`exSat ${CFG.EXSAT_RPC}  ·  Creditcoin ${$("ccRpc").value.trim()} — open ⚙ and paste a tunnel if this page is hosted`)
+            p(`Creditcoin is not reachable from this browser, so the attested height cannot be read here.`),
+            p(`The half of this step that lives on a public chain still checks out:`),
+            headerLine,
+            vlink(CFG.EXSAT_EXPLORER + "/block/" + CFG.ATTESTATION_HEIGHT, "↗ that block on scan.exsat.network"),
+            src(`exSat ${CFG.EXSAT_RPC} · Creditcoin ${ccUrl} — ${String(ccErr.shortMessage || ccErr.message || ccErr)}`)
           ]);
           return;
         }
 
         const latest = Number(attested.height);
         const behind = Math.max(0, need - latest);
-        const digestExists = Boolean(digestHeight.exists);
         if (behind > 0) {
           t.stop("err");
           setBody("atc", [
-            p(`attested height ${fmtN(latest)} · need ${fmtN(need)} · ~${fmtN(behind)} blocks behind`),
-            line(["quorum 1/1 · digest ", hashEl(CFG.ATTESTATION_DIGEST), document.createTextNode(digestExists ? "  on-chain" : "")]),
-            line([`header hash matches exSat RPC  ${headerOk ? "✓" : "✗"}`]),
-            vlink(CFG.EXSAT_EXPLORER + "/block/" + CFG.ATTESTATION_HEIGHT, "↗ verify header on scan.exsat.network"),
-            src(`ChainInfo 0x…0fd3  ·  chain_key ${CFG.EXSAT_CHAIN_KEY} (not chainId ${CFG.EXSAT_CHAIN_ID})  ·  ${$("ccRpc").value.trim()}`)
+            p(`Attested up to ${fmtN(latest)}, but this event sits at ${fmtN(need)} — ${fmtN(behind)} blocks short.`),
+            line(["digest ", hashEl(CFG.ATTESTATION_DIGEST), document.createTextNode(digestHeight?.exists ? "  on chain" : "")]),
+            headerLine,
+            src(`ChainInfo precompile · chain_key ${CFG.EXSAT_CHAIN_KEY} (not chainId ${CFG.EXSAT_CHAIN_ID}) · ${ccUrl}`)
           ]);
           return;
         }
         t.stop("ok");
         setBody("atc", [
-          line(["quorum 1/1 · digest ", hashEl(CFG.ATTESTATION_DIGEST)]),
-          p(`attested height ${fmtN(latest)} · attestor ${CFG.ATTESTOR.slice(0, 8)}…`),
-          line([`header hash matches exSat RPC  ${headerOk ? "✓" : "✗"} `]),
-          vlink(CFG.EXSAT_EXPLORER + "/block/" + CFG.ATTESTATION_HEIGHT, "↗ verify header on scan.exsat.network"),
-          src(`ChainInfo precompile  ·  ${$("ccRpc").value.trim()}`)
+          p(`Attested to height ${fmtN(latest)} — past the block holding this event.`),
+          line(["digest ", hashEl(CFG.ATTESTATION_DIGEST)]),
+          headerLine,
+          vlink(CFG.EXSAT_EXPLORER + "/block/" + CFG.ATTESTATION_HEIGHT, "↗ that block on scan.exsat.network"),
+          src(`ChainInfo precompile · attestor ${CFG.ATTESTOR.slice(0, 10)}… · quorum 1/1 · ${ccUrl}`)
         ]);
       } catch (e) {
         t.stop("err");
@@ -730,8 +1008,8 @@
 
     async function stepCc(ctx, token) {
       const t = timer("cc", "atc");
+      const ccUrl = $("ccRpc").value.trim();
       try {
-        const ccUrl = $("ccRpc").value.trim();
         await ccPing(ccUrl);
         const cc = new ethers.JsonRpcProvider(ccUrl, 42, { staticNetwork: true });
         const verifier = new ethers.Contract(CFG.VERIFIER, CFG.VERIFIER_ABI, cc);
@@ -743,75 +1021,388 @@
         if (ctx.event && ctx.relayerOk === false) {
           t.stop("err");
           setBody("cc", [
-            p("rejected: relayer is not btcwitness"),
-            line(["expected ", hashEl(expectedRelayer)]),
-            src(`${$("ccRpc").value.trim()}  ·  ${CFG.VERIFIER}`)
+            p("Rejected: the event was emitted by someone other than our relay account, so the verifier will not record it."),
+            line(["expected relayer ", hashEl(expectedRelayer)]),
+            src(`${CFG.VERIFIER} · ${ccUrl}`)
           ]);
           return;
         }
         if (!fact.proven) {
           t.stop("err");
-          const pre = document.createElement("pre");
-          pre.className = "json open";
-          pre.textContent = JSON.stringify({
-            getProvenValue: {
-              value: fact.value.toString(),
-              sourceHeight: fact.sourceHeight.toString(),
-              provenAt: fact.provenAt.toString(),
-              proven: fact.proven
-            },
-            expectedRelayer,
-            verifier: CFG.VERIFIER
-          }, null, 2);
           setBody("cc", [
-            p("not proven on Creditcoin — no BitcoinFactProven for this UTXO."),
-            p("This is the honest result until an operator relays and the verifier is called."),
-            pre,
-            src(`getProvenValue  ·  ${$("ccRpc").value.trim()}  ·  local devnet, no public explorer`)
+            p("Not proven on Creditcoin yet — no fact recorded for this UTXO."),
+            p("This is the honest result until someone generates the proof and calls the verifier."),
+            src(`getProvenValue returned proven = false · ${CFG.VERIFIER} · ${ccUrl}`)
           ]);
           return;
         }
         t.stop("ok");
-        const pre = document.createElement("pre");
-        pre.className = "json open";
+        const pre = el("pre", "json open");
         pre.textContent = JSON.stringify({
-          BitcoinFactProven: {
-            txid: ctx.txid,
-            index: ctx.index,
-            value: fact.value.toString(),
-            height: fact.sourceHeight.toString(),
-            provenAt: new Date(Number(fact.provenAt) * 1000).toISOString()
-          }
+          txid: ctx.txid,
+          index: ctx.index,
+          value: fact.value.toString(),
+          sourceHeight: fact.sourceHeight.toString(),
+          provenAt: new Date(Number(fact.provenAt) * 1000).toISOString()
         }, null, 2);
-        const toggle = document.createElement("button");
-        toggle.className = "linkish";
-        toggle.textContent = "↗ raw receipt JSON (local devnet, no public explorer)";
+        const toggle = el("button", "linkish", "the stored fact, as any Creditcoin contract would read it");
         toggle.onclick = () => pre.classList.toggle("open");
         setBody("cc", [
-          p(`BitcoinFactProven(${ctx.txid.slice(0, 8)}…, ${ctx.index}, ${fact.value}, ${fact.sourceHeight})`),
-          p(`value ${fmtSats(fact.value)} · source height ${fmtN(fact.sourceHeight)}`),
+          p(`<b>${fmtSats(fact.value)}</b> — recorded on Creditcoin, dated to exSat EVM height ${fmtN(fact.sourceHeight)}.`),
+          p("Any contract on Creditcoin can now read this without trusting us."),
           toggle,
           pre,
-          src(`getProvenValue  ·  ${CFG.VERIFIER}  ·  ${$("ccRpc").value.trim()}`)
+          src(`getProvenValue · ${CFG.VERIFIER} · local devnet, so no public explorer`)
         ]);
       } catch (e) {
         t.stop("err");
         setBody("cc", [
-          p("Creditcoin verifier unreachable."),
-          p(String(e.shortMessage || e.message || e)),
-          src(`${$("ccRpc").value.trim()} — open ⚙ if you need a tunnel`)
+          p("Creditcoin devnet unreachable from this browser."),
+          src(`${ccUrl} — ${String(e.shortMessage || e.message || e)}`)
         ]);
       }
     }
 
-    $("prove").onclick = () => {
-      const txid = $("txid").value.trim();
-      const index = $("vout").value.trim() || "0";
-      const historical = txid.replace(/^0x/, "").toLowerCase() === CFG.KNOWN.txid && Number(index) === CFG.KNOWN.index;
-      runTrail(txid, index, { historical });
+    $("prove").onclick = () => runTrail($("txid").value.trim(), $("vout").value.trim() || "0");
+
+    /* =====================  exSat sync indicator  ===================== */
+
+    let INDEX_HEIGHT = null;
+
+    async function loadSync() {
+      let state, tip;
+      try {
+        [state, tip] = await Promise.all([readChainstate(), btcTip().catch(() => null)]);
+      } catch (e) {
+        $("syncSkel").textContent =
+          "exSat's index could not be read just now: " + String(e.message || e);
+        return;
+      }
+
+      const indexed = Number(state.parsed_height ?? state.head_height);
+      INDEX_HEIGHT = indexed;
+      const box = $("syncBody");
+      box.innerHTML = "";
+
+      const stats = el("div", "stats");
+      const stat = (k, v, u, cls) => {
+        const s = el("div", "stat" + (cls ? " " + cls : ""));
+        s.appendChild(el("div", "k", k));
+        s.appendChild(el("div", "v", v));
+        if (u) s.appendChild(el("div", "u", u));
+        return s;
+      };
+      stats.appendChild(stat("exSat index", fmtN(indexed), "highest Bitcoin block parsed"));
+      if (tip != null) {
+        stats.appendChild(stat("Bitcoin tip", fmtN(tip), "read from a public Bitcoin API"));
+        stats.appendChild(stat("Gap", fmtN(tip - indexed), blocksToHuman(tip - indexed) + " of Bitcoin", "gap"));
+      }
+      stats.appendChild(stat("Outputs indexed", fmtN(state.num_utxos), "the UTXO set exSat holds"));
+      box.appendChild(stats);
+
+      if (tip != null && tip > indexed) {
+        const gap = tip - indexed;
+
+        const full = el("div", "scale");
+        const fullCap = el("div", "cap");
+        fullCap.appendChild(el("span", null, "genesis · 0"));
+        fullCap.appendChild(el("span", null, "Bitcoin tip · " + fmtN(tip)));
+        full.appendChild(fullCap);
+        const fullBar = el("div", "bar");
+        const known = el("div", "known");
+        known.style.width = (indexed / tip * 100).toFixed(3) + "%";
+        const unknown = el("div", "unknown");
+        unknown.style.flex = "1";
+        fullBar.appendChild(known); fullBar.appendChild(unknown);
+        full.appendChild(fullBar);
+        const legend = el("div", "legend");
+        legend.innerHTML =
+          `<span><i class="k1"></i>provable — inside exSat's index</span>` +
+          `<span><i class="k2"></i>waiting on exSat to resume</span>`;
+        full.appendChild(legend);
+        box.appendChild(full);
+
+        /* At full scale the gap is a fraction of a percent, which is true but unreadable.
+           A window centred on the freeze shows the same two numbers at a legible size. */
+        const zoom = el("div", "scale");
+        const zCap = el("div", "cap");
+        zCap.appendChild(el("span", null, fmtN(indexed - gap)));
+        zCap.appendChild(el("span", null, `zoomed to the last ${fmtN(gap * 2)} blocks`));
+        zCap.appendChild(el("span", null, fmtN(tip)));
+        zoom.appendChild(zCap);
+        const zBar = el("div", "bar");
+        const zKnown = el("div", "known"); zKnown.style.width = "50%";
+        const zUnknown = el("div", "unknown"); zUnknown.style.flex = "1";
+        zBar.appendChild(zKnown); zBar.appendChild(zUnknown);
+        zoom.appendChild(zBar);
+        const zNote = el("div", "legend");
+        zNote.appendChild(el("span", null,
+          `The boundary sits at ${fmtN(indexed)}. Facts at or below it are provable today; above it, exSat has no data to read.`));
+        zoom.appendChild(zNote);
+        box.appendChild(zoom);
+      }
+
+      $("syncSkel").style.display = "none";
+      box.style.display = "block";
+
+      /* The reason for the freeze is itself an on-chain row — show it only if it reads. */
+      try {
+        const next = indexed + 1;
+        const res = await tableRows(CFG.BLKENDT, String(next), "endorsements", { limit: 1 });
+        const row = res.rows?.[0];
+        if (!row || !Array.isArray(row.provider_validators)) return;
+        const have = row.provider_validators.length;
+        const missing = (row.requested_validators || []).map((v) => v.account);
+        const total = have + missing.length;
+        const when = row.provider_validators
+          .map((v) => v.created_at).filter(Boolean).sort().pop();
+
+        const why = el("div", "why");
+        why.appendChild(el("div", "t", "exSat stopped here, and it is not our doing."));
+        const detail = el("p");
+        detail.innerHTML =
+          `Bitcoin block <span class="val">${fmtN(next)}</span> needs endorsements from exSat's ` +
+          `validators before the index can advance. It has <b>${have} of ${total}</b>` +
+          (missing.length
+            ? `, still waiting on <span class="val">${missing.join(", ")}</span>.`
+            : `.`) +
+          (when ? ` The last one was cast on ${new Date(when + "Z").toISOString().slice(0, 10)}.` : "");
+        why.appendChild(detail);
+        why.appendChild(line([
+          vlink(CFG.EOS_ACCOUNT_EXPLORER + CFG.BLKENDT, "↗ blkendt.xsat on blocksfinity"),
+          document.createTextNode("  ·  "),
+          vlink("https://mempool.space/block/" + row.hash, "↗ block " + fmtN(next) + " on mempool.space")
+        ]));
+        why.appendChild(src(`POST ${eosRpc}/v1/chain/get_table_rows · code ${CFG.BLKENDT} · scope ${next} · table endorsements`));
+        box.appendChild(why);
+      } catch (_) {
+        /* No endorsement row, no claim about why. */
+      }
+    }
+
+    /* =====================  check any UTXO  ===================== */
+
+    function verdict(cls, title, nodes) {
+      const out = $("checkOut");
+      out.innerHTML = "";
+      const v = el("div", "verdict" + (cls ? " " + cls : ""));
+      v.appendChild(el("div", "t", title));
+      nodes.forEach((n) => v.appendChild(n));
+      out.appendChild(v);
+    }
+
+    async function checkUtxo(rawTxid, rawVout) {
+      const txid = String(rawTxid).trim().replace(/^0x/, "").toLowerCase();
+      const index = Number(rawVout) || 0;
+      if (!isTxid(txid)) {
+        verdict("", "That is not a Bitcoin txid", [
+          p("A txid is 64 hexadecimal characters. Nothing was queried.")
+        ]);
+        return;
+      }
+      $("checkBtn").disabled = true;
+      verdict("", "Looking it up…", [p(`Reading utxomng.xsat on EOS mainnet for output ${index} of this transaction.`)]);
+
+      try {
+        const state = await readChainstate();
+        const indexed = Number(state.parsed_height ?? state.head_height);
+        const { utxoId, row } = await findUtxo(txid, index);
+
+        if (row) {
+          verdict("found", "Found — unspent in exSat's index", [
+            el("div", "big", fmtSats(row.value)),
+            p(`True <b>as of Bitcoin height ${fmtN(indexed)}</b>, which is where exSat's index stands. Not a claim about today.`),
+            line(["utxo_id ", hashEl(utxoId)]),
+            line([
+              vlink("https://mempool.space/tx/" + txid, "↗ the transaction on mempool.space"),
+              document.createTextNode("  ·  "),
+              vlink(CFG.EOS_ACCOUNT_EXPLORER + CFG.UTXOMNG, "↗ utxomng.xsat on blocksfinity")
+            ]),
+            src(`table utxos · index byutxoid · ${eosRpc}`)
+          ]);
+          return;
+        }
+
+        /* Not in the set. Bitcoin itself says which of the three reasons applies. */
+        let tx = null, txErr = null;
+        try { tx = await btcTx(txid); } catch (e) { txErr = e; }
+
+        if (txErr) {
+          verdict("", "Not in exSat's index", [
+            p(`No output ${index} of this transaction is in the set at height ${fmtN(indexed)}.`),
+            p("Bitcoin could not be queried just now, so the page cannot tell you whether that is because the output was spent or because the transaction is newer than the index."),
+            src(String(txErr.message || txErr))
+          ]);
+          return;
+        }
+        if (!tx) {
+          verdict("", "Bitcoin has never seen this transaction", [
+            p("It is not in exSat's index, and a public Bitcoin API does not know the txid either."),
+            src(`GET ${btcApi}/tx/${txid} → 404`)
+          ]);
+          return;
+        }
+        const h = tx.status?.confirmed ? Number(tx.status.block_height) : null;
+        if (h == null) {
+          verdict("newer", "Confirmed nowhere yet", [
+            p("This transaction is still unconfirmed in the mempool, so no index can contain its outputs."),
+            src(`GET ${btcApi}/tx/${txid} · status.confirmed = false`)
+          ]);
+          return;
+        }
+        if (h > indexed) {
+          verdict("newer", "Newer than exSat's index — not a failure", [
+            p(`This transaction is in Bitcoin block <b>${fmtN(h)}</b>. exSat's index stops at <b>${fmtN(indexed)}</b>, ${fmtN(h - indexed)} blocks earlier.`),
+            p("So exSat has no row to read, and neither a yes nor a no would be honest. Once exSat resumes indexing, this same lookup will answer."),
+            line([vlink("https://mempool.space/tx/" + txid, "↗ the transaction on mempool.space")]),
+            src(`GET ${btcApi}/tx/${txid} · block_height ${fmtN(h)} > parsed_height ${fmtN(indexed)}`)
+          ]);
+          return;
+        }
+        verdict("", "Spent — or that output never existed", [
+          p(`This transaction is in block ${fmtN(h)}, which the index has parsed, and output ${index} is not in the unspent set.`),
+          p("Either it has since been spent, or the transaction has fewer outputs than that."),
+          line([vlink("https://mempool.space/tx/" + txid, "↗ the transaction on mempool.space")]),
+          src(`block_height ${fmtN(h)} ≤ parsed_height ${fmtN(indexed)} · not in table utxos`)
+        ]);
+      } catch (e) {
+        verdict("", "The lookup failed", [
+          p(String(e.message || e)),
+          src("No result is shown when a request does not come back.")
+        ]);
+      } finally {
+        $("checkBtn").disabled = false;
+      }
+    }
+
+    $("checkBtn").onclick = () => checkUtxo($("ctxid").value, $("cvout").value);
+    $("ctxid").addEventListener("keydown", (e) => { if (e.key === "Enter") $("checkBtn").click(); });
+    /* ?check=<txid>&cvout=<n> makes a single lookup shareable as a link. */
+    if (params.get("check")) {
+      $("ctxid").value = params.get("check");
+      $("cvout").value = params.get("cvout") || "0";
+      checkUtxo(params.get("check"), params.get("cvout") || "0");
+    }
+    $("exKnown").onclick = () => {
+      $("ctxid").value = CFG.KNOWN.txid;
+      $("cvout").value = CFG.KNOWN.index;
+      checkUtxo(CFG.KNOWN.txid, CFG.KNOWN.index);
+    };
+    $("exRecent").onclick = async () => {
+      const btn = $("exRecent");
+      btn.disabled = true;
+      const was = btn.textContent;
+      btn.textContent = "finding one…";
+      try {
+        const tip = await btcTip();
+        const hashRes = await btcGet("/block-height/" + tip);
+        const hash = await hashRes.text();
+        const idsRes = await btcGet("/block/" + hash + "/txids");
+        const ids = await idsRes.json();
+        const pick = ids[1] || ids[0];
+        $("ctxid").value = pick;
+        $("cvout").value = 0;
+        await checkUtxo(pick, 0);
+      } catch (e) {
+        verdict("", "Could not fetch a recent transaction", [p(String(e.message || e))]);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = was;
+      }
     };
 
-    runTrail($("txid").value.trim(), $("vout").value.trim(), { historical: true });
+    /* =====================  what has been relayed  ===================== */
+
+    async function loadProven() {
+      let logs, provider;
+      try {
+        provider = await evmProvider();
+        const receiver = new ethers.Contract(CFG.RECEIVER, CFG.RECEIVER_ABI, provider);
+        ({ logs } = await receiverLogs(provider, receiver.filters.BitcoinUtxoAttested()));
+      } catch (e) {
+        $("provenSkel").textContent = "exSat EVM could not be read just now: " + String(e.shortMessage || e.message || e);
+        return;
+      }
+
+      const box = $("provenBody");
+      box.innerHTML = "";
+      if (!logs.length) {
+        $("provenSkel").textContent = "The receiver has emitted no events.";
+        return;
+      }
+
+      /* Proven status lives on the devnet; ask, but never invent an answer. */
+      let verifier = null;
+      try {
+        const ccUrl = $("ccRpc").value.trim();
+        await ccPing(ccUrl);
+        const cc = new ethers.JsonRpcProvider(ccUrl, 42, { staticNetwork: true });
+        verifier = new ethers.Contract(CFG.VERIFIER, CFG.VERIFIER_ABI, cc);
+      } catch (_) { verifier = null; }
+
+      const table = el("table", "relays");
+      table.innerHTML =
+        `<thead><tr>
+           <th>Bitcoin output</th>
+           <th>Value</th>
+           <th class="hide-sm">exSat EVM block</th>
+           <th>On Creditcoin</th>
+         </tr></thead>`;
+      const tbody = el("tbody");
+      let provenCount = 0;
+
+      for (const log of logs) {
+        const parsed = { txid: log.topics[1].replace(/^0x/, ""), };
+        const decoded = ethers.AbiCoder.defaultAbiCoder().decode(["uint32", "uint64"], log.data);
+        const index = Number(decoded[0]);
+        const value = decoded[1];
+
+        let cell;
+        if (!verifier) {
+          cell = el("span", "pill unk", "devnet unreachable");
+        } else {
+          try {
+            const fact = await verifier.getProvenValue(log.topics[1], index);
+            if (fact.proven) { provenCount++; cell = el("span", "pill yes", "proven"); }
+            else cell = el("span", "pill unk", "relayed only");
+          } catch (_) {
+            cell = el("span", "pill unk", "unreadable");
+          }
+        }
+
+        const tr = el("tr");
+        const c1 = el("td");
+        c1.appendChild(hashEl(parsed.txid, 10));
+        c1.appendChild(document.createTextNode(":" + index));
+        const c2 = el("td", "mono", fmtSats(value).replace(/ sats.*/, " sats"));
+        const c3 = el("td", "hide-sm");
+        c3.appendChild(vlink(CFG.EXSAT_EXPLORER + "/tx/" + log.transactionHash, fmtN(log.blockNumber) + " ↗"));
+        const c4 = el("td");
+        c4.appendChild(cell);
+        tr.append(c1, c2, c3, c4);
+        tbody.appendChild(tr);
+      }
+      table.appendChild(tbody);
+      const scroller = el("div", "tscroll");
+      scroller.appendChild(table);
+      box.appendChild(scroller);
+
+      const summary = el("p", "note");
+      summary.innerHTML = verifier
+        ? `<b>${logs.length}</b> relays on exSat EVM mainnet, <b>${provenCount}</b> of them carried through to a recorded fact on Creditcoin. Different UTXOs, same path each time.`
+        : `<b>${logs.length}</b> relays on exSat EVM mainnet, read live from the receiver's logs. Whether each one was carried through to Creditcoin can only be read from the devnet, which is not reachable from this browser.`;
+      box.appendChild(summary);
+      box.appendChild(src(`eth_getLogs · ${CFG.RECEIVER} · ${CFG.EXSAT_RPC}`));
+
+      $("provenSkel").style.display = "none";
+      box.style.display = "block";
+    }
+
+    /* =====================  boot  ===================== */
+
+    runTrail($("txid").value.trim(), $("vout").value.trim() || "0");
+    loadSync();
+    loadProven();
   </script>
 </body>
 </html>
