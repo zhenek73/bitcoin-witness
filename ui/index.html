@@ -560,9 +560,11 @@
     ];
 
     const LOCAL_NOTE =
-      "Reads the Creditcoin devnet on the author's machine. If you are not on that machine this " +
-      "station will report unreachable, which is the honest result — the recorded demo shows this " +
-      "step running live, and ⚙ accepts a tunnel URL.";
+      "Reads the Creditcoin devnet on the author's machine, because exSat is not a registered " +
+      "Attestcoin source chain on the public network. On this hosted copy the station reports " +
+      "unreachable for everyone — the browser blocks an https:// page from calling a local " +
+      "http:// address, so the devnet is never even asked. The recorded demo shows this step " +
+      "running live against the same code, and ⚙ accepts an https:// tunnel URL.";
 
     const $ = (id) => document.getElementById(id);
     const params = new URLSearchParams(location.search);
@@ -666,6 +668,24 @@
         if (e.name === "AbortError") throw new Error((label || url) + " timed out");
         throw e;
       } finally { clearTimeout(t); }
+    }
+
+    /* A page served over HTTPS may not call http://127.0.0.1. The browser refuses
+       it as mixed content -- and Chrome refuses it a second time as a private
+       network request -- before the devnet is ever contacted. On the hosted copy
+       of this page stations ④ and ⑤ therefore fail even on the machine that is
+       running the devnet, so reporting "unreachable" there would blame the wrong
+       thing entirely. */
+    function schemeBlocked(url) {
+      return location.protocol === "https:" && /^http:\/\//i.test(String(url));
+    }
+    function ccUnreachableWhy(url) {
+      return schemeBlocked(url)
+        ? "This page is served over HTTPS, and the browser will not let it call an http:// " +
+          "address on your own machine. The devnet is not being asked at all — the request is " +
+          "refused before it leaves the browser. Open this page from the machine running the " +
+          "devnet over http://localhost, or put an https:// tunnel URL in ⚙."
+        : "Creditcoin is not reachable from this browser, so this step cannot be read here.";
     }
 
     async function ccPing(url) {
@@ -1012,7 +1032,7 @@
         if (ccErr) {
           t.stop("err");
           setBody("atc", [
-            p(`Creditcoin is not reachable from this browser, so the attested height cannot be read here.`),
+            p(ccUnreachableWhy(ccUrl)),
             p(`The half of this step that lives on a public chain still checks out:`),
             headerLine,
             vlink(CFG.EXSAT_EXPLORER + "/block/" + CFG.ATTESTATION_HEIGHT, "↗ that block on scan.exsat.network"),
@@ -1098,7 +1118,7 @@
       } catch (e) {
         t.stop("err");
         setBody("cc", [
-          p("Creditcoin devnet unreachable from this browser."),
+          p(ccUnreachableWhy(ccUrl)),
           src(`${ccUrl} — ${String(e.shortMessage || e.message || e)}`)
         ]);
       }
@@ -1431,7 +1451,11 @@
       const summary = el("p", "note");
       summary.innerHTML = verifier
         ? `<b>${logs.length}</b> relays on exSat EVM mainnet, <b>${provenCount}</b> of them carried through to a recorded fact on Creditcoin. Different UTXOs, same path each time.`
-        : `<b>${logs.length}</b> relays on exSat EVM mainnet, read live from the receiver's logs. Whether each one was carried through to Creditcoin can only be read from the devnet, which is not reachable from this browser.`;
+        : `<b>${logs.length}</b> relays on exSat EVM mainnet, read live from the receiver's logs. ` +
+          `Whether each one was carried through to Creditcoin can only be read from the devnet, ` +
+          (schemeBlocked($("ccRpc").value.trim())
+            ? `and this page is served over HTTPS, so the browser refuses to call it at an http:// address.`
+            : `which is not reachable from this browser.`);
       box.appendChild(summary);
       box.appendChild(src(`eth_getLogs · ${CFG.RECEIVER} · ${CFG.EXSAT_RPC}`));
 
