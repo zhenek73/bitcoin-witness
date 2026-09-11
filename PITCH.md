@@ -97,8 +97,15 @@ nothing is fabricated — the substituted value is derived from the chain's own 
 
 The clean upstream fix is smaller still: Attestcoin **already** skips exactly this check for
 pre-Byzantium Ethereum mainnet, for exactly this class of reason, with a comment noting that the
-transaction-root check still guards against reorgs. exSat needs the same exemption. Both defects
-are written up in [`docs/`](docs/) and reported upstream.
+transaction-root check still guards against reorgs. exSat needs the same exemption.
+
+Both defects are written up in [`docs/`](docs/) and **filed upstream against Gluwa's repository**:
+
+- [gluwa/creditcoin3#1355](https://github.com/gluwa/creditcoin3/issues/1355) — the attestor cannot
+  follow any chain without a receipts trie, and reports it as a reorg that never happened.
+- [gluwa/creditcoin3#1356](https://github.com/gluwa/creditcoin3/pull/1356) — a merged-ready patch
+  for the second defect: `register_bls` logs "already registered" for an account that is not
+  registered at all, which sends operators looking in exactly the wrong place.
 
 ## 5. What we are honest about
 
