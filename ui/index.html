@@ -505,21 +505,21 @@
       EXSAT_RPC: "https://evm.exsat.network",
       EXSAT_EXPLORER: "https://scan.exsat.network",
       EXSAT_CHAIN_ID: 7200,
-      // 8, not 7: chain 7 registered exSat with attestation genesis 59225940 (near
-      // the head on 2026-08-26), and that genesis is immutable once a chain has
-      // attestation history. Chain key 8 is the same exSat, re-registered as "exSat2"
-      // with genesis 59791700 so the blocks this demo proves are actually reachable.
-      EXSAT_CHAIN_KEY: 8,
+      // Assigned by devnet/bootstrap-devnet.mjs when it registers exSat on the
+      // local CC3 chain. If the chain is ever rebuilt (`docker compose down -v`),
+      // re-run that script and update this key, VERIFIER, ATTESTATION_HEIGHT,
+      // ATTESTATION_HEADER and ATTESTATION_DIGEST to match the new chain.
+      EXSAT_CHAIN_KEY: 7,
       RECEIVER: "0xBF823785C5749532AE927d7285093Eae279fe16C",
       NATIVE_DEPLOY_TX: "6d563fadb639e80aab743af0c54f6075430c2cdd8ed138772602f6c0cdcaeec6",
-      VERIFIER: "0x3ed62137c5DB927cb137c26455969116BF0c23Cb",
+      VERIFIER: "0xc01Ee7f10EA4aF4673cFff62710E1D7792aBa8f3",
       CHAIN_INFO: "0x0000000000000000000000000000000000000fd3",
       ATTESTOR: "5CB4odFpzLL7MFFcr12VX18YgEvJegpXkdvkeYun77hUKtc5",
-      ATTESTATION_HEIGHT: 59791700,
-      ATTESTATION_HEADER: "0xe47664ed9713c33aeb7397b002a8ad021e48ce4ec625368846aa6b8621953ff6",
-      ATTESTATION_DIGEST: "0x533cad0c17ee3f709c9be6274755b62b77022e4bb52c94a3cb2a9ee0955206ce",
+      ATTESTATION_HEIGHT: 60673341,
+      ATTESTATION_HEADER: "0xffc4970fe05de8e353beb24802bc1c4cb8c06024f9469d4a365c6e263942b6e1",
+      ATTESTATION_DIGEST: "0xfe4d5329d78d9225d11bf476c3108110d2a45793360ee445b9837829871ebf75",
       KNOWN: {
-        txid: "e1afd89295b68bc5247fe0ca2885dd4b8818d7ce430faa615067d7bab8640156",
+        txid: "c361e2f4581f035dd58b99788347884e046e47b4c17ec347344ff8b24cd377ec",
         index: 0
       },
       BTC_APIS: ["https://blockstream.info/api", "https://mempool.space/api"],

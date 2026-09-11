@@ -10,12 +10,13 @@
 # be inlined here has been discarded.)
 attestor:
   name: "Bitcoin Witness Attestor"
-  # Chain key 8 = the "exSat2" registration (same chainId 7200, same RPC, same
-  # data) whose attestation genesis is 59791700 -- just below block 59791789,
-  # where our BitcoinUtxoAttested event lives. Chain key 7's genesis is pinned at
-  # 59225940 and cannot be moved once a chain has attestation history, and
-  # catching up from there would take ~40 hours. See register-exsat2.mjs.
-  chain_key: 8                 # assigned by register_chain, NOT the EVM chainId
+  # Assigned by bootstrap-devnet.mjs when it registers exSat on a fresh chain.
+  # Re-run that script after `docker compose down -v` and put the key it prints
+  # here. The attestation genesis it picks sits ~200 blocks below exSat's head at
+  # registration time: the genesis is immutable once the chain has attestation
+  # history, and starting from a stale height means grinding through hundreds of
+  # thousands of blocks at ~230 blocks/min before reaching anything useful.
+  chain_key: 7                 # assigned by register_chain, NOT the EVM chainId
   secret: "${ATTESTOR_SECRET}"
 
 api:

@@ -12,8 +12,23 @@ services:
     container_name: bw-cc3-devnet
     image: gluwa/creditcoin3
     entrypoint: /bin/creditcoin3-node
+    # The image runs as a non-root user, but a freshly created named volume is
+    # owned by root, so the node cannot create its RocksDB directory and dies
+    # with "Failed to create RocksDB directory: Permission denied". Running this
+    # one container as root is the simplest fix for a local devnet.
+    user: root
     command:
       - --dev
+      # --base-path + a named volume, because `--dev` on its own keeps chain
+      # state in a temporary directory that is discarded when the container
+      # stops. Without this, a reboot silently resets the chain to genesis:
+      # the registered source chain, the elected attestor, every attestation
+      # and the deployed BitcoinFactVerifier all vanish, and the attestor then
+      # dies with "chain key N not supported" -- which reads like a config bug
+      # rather than a wiped chain. Learned the hard way after a Windows update
+      # restarted the machine.
+      - --base-path
+      - /cc3-data
       - --validator
       - --pruning
       - archive
@@ -22,6 +37,9 @@ services:
       - all
     ports:
       - "9944:9944"
+    volumes:
+      - cc3-data:/cc3-data
+    restart: unless-stopped
 
   # exSat's EVM layer never populates `receiptsRoot` / `stateRoot` in its block
   # headers -- every block reports 32 zero bytes for both, whether or not it has
@@ -62,6 +80,7 @@ services:
       - /config/attestor-config.yaml
     environment:
       - ATTESTOR_SECRET
+    restart: unless-stopped
     volumes:
       - ./attestor-config.yaml:/config/attestor-config.yaml:ro
     depends_on:
@@ -113,3 +132,10 @@ services:
     depends_on:
       - cc3
       - exsat-shim
+    restart: unless-stopped
+
+volumes:
+  # Chain state for the cc3 node. Named volume rather than a bind mount so it
+  # survives `docker compose down` and machine reboots; wipe it deliberately
+  # with `docker compose down -v` when you want a genuinely fresh chain.
+  cc3-data:
