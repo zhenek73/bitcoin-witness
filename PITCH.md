@@ -48,20 +48,27 @@ Four pieces, all deployed and all running:
 
 2. **`BitcoinWitnessReceiver`** — a Solidity contract live on **exSat EVM mainnet** (chain 7200)
    at `0xBF823785C5749532AE927d7285093Eae279fe16C`, which turns the relayed fact into a standard
-   EVM event. It has emitted **5 real `BitcoinUtxoAttested` events**, all publicly checkable.
+   EVM event. It has emitted **6 real `BitcoinUtxoAttested` events**, all publicly checkable.
 
 3. **A live Attestcoin attestor watching exSat.** exSat was not a registered Attestcoin source
-   chain — so we ran our own Creditcoin node, registered it (`chain_key 8`), bootstrapped an
+   chain — so we ran our own Creditcoin node, registered it (`chain_key 7`), bootstrapped an
    attestor, and it now attests real exSat mainnet blocks continuously.
 
-4. **`BitcoinFactVerifier`** — a Creditcoin contract at `0x3ed62137c5DB927cb137c26455969116BF0c23Cb`
+4. **`BitcoinFactVerifier`** — a Creditcoin contract at `0xc01Ee7f10EA4aF4673cFff62710E1D7792aBa8f3`
    that proves the attested payload through the BlockProver precompile, then authenticates the fact
    *from inside the attested bytes*: right recipient, right emitting contract, right event
    signature, right relayer, successful receipt. A caller chooses only *which* proven transaction
    to submit — never what it says. 9 tests, 5 of them negative paths.
 
-**Three different Bitcoin UTXOs have gone the whole way and read back `proven = true` on
-Creditcoin.** Three, not one — this is reproducible, not a lucky run.
+**Four different Bitcoin UTXOs have gone the whole way and read back `proven = true` on
+Creditcoin.** Four, not one — this is reproducible, not a lucky run.
+
+We can make a stronger claim than "it ran once", because we were forced to prove it. A machine
+restart wiped the devnet chain — the node had been running without persistent storage, so the
+registered source chain, the elected attestor and the deployed verifier all vanished at once.
+Rebuilding from genesis took one command and about ten minutes, and the pipeline proved a fresh
+UTXO again on the new chain. The stand is now reproducible from scratch by design, not by luck:
+`devnet/bootstrap-devnet.mjs`.
 
 ## 4. What we found on the way
 
@@ -145,12 +152,12 @@ root-caused against live chain data rather than guessed at.
 
 | Piece | State |
 |---|---|
-| Native relay contract | **deployed, EOS mainnet** (`btcwitness11`), 5 real relays |
-| EVM receiver | **deployed, exSat EVM mainnet**, 5 `BitcoinUtxoAttested` events |
-| Creditcoin devnet + exSat registered | **working** (`chain_key 8`) |
+| Native relay contract | **deployed, EOS mainnet** (`btcwitness11`), 6 real relays |
+| EVM receiver | **deployed, exSat EVM mainnet**, 6 `BitcoinUtxoAttested` events |
+| Creditcoin devnet + exSat registered | **working** (`chain_key 7`), rebuildable in one command |
 | Attestor against exSat mainnet | **working** — attesting live exSat blocks |
 | Creditcoin verifier | **deployed**, 9 tests incl. 5 negative paths |
-| Live end-to-end run | **done — 3 UTXOs proven**, transcript in repo |
+| Live end-to-end run | **done — 4 UTXOs proven**, transcript in repo |
 
 Everything above was verified against running software and live chain queries, not inferred from
 source.
