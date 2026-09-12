@@ -47,6 +47,27 @@
    pipeline proves nothing at all; see `contracts/asc/test_verifier.py`, which fails loudly if it
    is removed.
 
+6. **Consumer: the solvency guard** (Solidity, deployed on Creditcoin)
+
+   A proven fact is inert until something acts on it. `contracts/asc/ReserveGuard.sol` keeps a
+   registry of the Bitcoin outpoints an issuer declares as reserve, sums the value of those that
+   are both **proven** (through `BitcoinFactVerifier`) and **fresh** (within `maxFactAge`), and
+   exposes `checkMint(amount)`, which reverts with
+   `Insolvent(supplyAfter, provenReserves, staleOutpoints)` unless wrapped supply stays inside
+   that sum. `GuardedWBTC.mint` calls it in one line before creating a token.
+
+   Two design points worth stating because they are easy to get backwards:
+
+   - **The supply figure is read from the token, not passed in by the caller.** A
+     caller-supplied supply would make the check theatre.
+   - **Staleness is conservative by construction.** Proofs lag (Bitcoin confirmations, then
+     attestation depth), so a deposit not yet proven simply does not count. Latency therefore
+     makes the guard *stricter*, never more permissive: it fails closed.
+
+   `contracts/asc/WrappedBTC.sol` also contains `NaiveWBTC` — the identical token with the guard
+   call removed — deployed on purpose as the control case, so the difference is a transaction
+   receipt rather than a claim.
+
 ## Why this needs no one's permission
 
 - `evm.xsat`'s `call()` action requires only the caller's own signature — no allowlist, no
@@ -97,14 +118,24 @@ stays outside the protocol.
 
 ## Components status
 
+Current as of 2026-09-12. Every row below was checked against running software or a live chain
+query, not inferred from source.
+
 | Component | Status |
 |---|---|
-| Native relay contract (`contracts/native`) | **builds** with CDT 4.1.0 (~11 KB wasm); UTXO key derivation verified against live chain data; not yet deployed |
-| EVM receiver contract (`contracts/evm`) | v1 written; calldata layout verified end-to-end against a real compiled+deployed instance (`contracts/evm/test_receiver.py`) |
-| Creditcoin devnet + exSat registration (`devnet/`) | **working** — exSat registered as source chain (chain_key 7, chainId 7200, encoding V1), confirmed via the ChainInfo precompile |
-| Attestcoin attestor against exSat | **working** — attesting live exSat mainnet blocks; attestation for height 59225940 finalized on Creditcoin, header hash matches exSat's own RPC exactly |
-| Creditcoin verification contract (`contracts/asc`) | v1 written; decoding + authentication covered by 9 tests against real V1-format payloads, incl. 5 negative paths (`contracts/asc/test_verifier.py`) |
-| Proof generation + submission script (`scripts/prove_fact.ts`) | v1 written, typechecks; not yet run against a live network |
+| Native relay contract (`contracts/native`) | **deployed, EOS mainnet** as `btcwitness11`; 7 real relays in chain history |
+| EVM receiver contract (`contracts/evm`) | **deployed, exSat EVM mainnet** at `0xBF823785C5749532AE927d7285093Eae279fe16C`; 7 `BitcoinUtxoAttested` events |
+| Creditcoin devnet + exSat registration (`devnet/`) | **working** — exSat registered as source chain (chain_key 7, chainId 7200, encoding V1), confirmed via the ChainInfo precompile; rebuildable from genesis in one command (`devnet/bootstrap-devnet.mjs`) |
+| Attestcoin attestor against exSat | **working** — attesting live exSat mainnet blocks continuously; header hashes match exSat's own RPC exactly |
+| Creditcoin verification contract (`contracts/asc`) | **deployed** at `0xc01Ee7f10EA4aF4673cFff62710E1D7792aBa8f3`; decoding + authentication covered by 9 tests against real V1-format payloads, incl. 5 negative paths (`contracts/asc/test_verifier.py`) |
+| Proof generation + submission (`scripts/prove_fact.ts`, `scripts/demo.ts`) | **run against live networks** — 5 distinct UTXOs proven end to end, transcript in `docs/demo-transcript-2026-09-01.txt` |
+| Solvency guard (`contracts/asc/ReserveGuard.sol`) | **deployed** at `0x21cb3940e6Ba5284E1750F1109131a8E8062b9f1`; 5-beat demo passing (`docs/demo-solvency-transcript-2026-09-12.txt`) |
+| Guarded token / unguarded control (`contracts/asc/WrappedBTC.sol`) | **deployed** at `0x3469E1DaC06611030AEce8209F07501E9A7aCC69` and `0x7d4567B7257cf869B01a47E8cf0EDB3814bDb963` |
+
+Creditcoin-side addresses are on a self-hosted CC3 devnet. That chain is rebuilt from genesis by
+`devnet/bootstrap-devnet.mjs`, and the deploy scripts write the current addresses into
+`scripts/verifier-deployment.json` and `scripts/guard-deployment.json` — treat those files, not
+this table, as the source of truth after any rebuild.
 
 ## How exSat relates to EOS
 

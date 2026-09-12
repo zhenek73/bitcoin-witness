@@ -153,9 +153,16 @@ reserve, mint 10 gwBTC against 50 BTC proven, watch a 50,000 gwBTC mint revert w
 `Insolvent(...)`, watch the *unguarded* token accept the same attack without complaint, and
 finally let the reserve proof age out and see even one satoshi refused.
 
-## Architecture
+## Documentation
 
-See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full technical breakdown.
+**[`docs/OVERVIEW.md`](docs/OVERVIEW.md) is the single document that covers everything** — the
+problem, the data path hop by hop, every deployed address, the solvency layer, the full trust
+model, what the project cannot claim, the tests, the upstream findings, and how to run the whole
+stand from nothing. Start there.
+
+Narrower documents: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) (component-level detail) ·
+[`PITCH.md`](PITCH.md) (the argument) · [`CHANGELOG.md`](CHANGELOG.md) (dated history, including
+every mistake).
 
 ## License
 
