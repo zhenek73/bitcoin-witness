@@ -8,20 +8,28 @@ BUIDL CTC 2026 Fall · exSat + Attestcoin + Creditcoin
 ## 1. The problem, in one paragraph
 
 Every wrapped Bitcoin carries exactly one promise: **the supply on this chain never exceeds
-the BTC held in reserve.** Nobody checks that promise at the moment it matters. It is checked
-off chain, after the fact, by an auditor, on a schedule — while the mint transaction itself
-asks no questions at all. The large bridge losses of the last few years are all the same
-shape: an attacker finds a path that mints tokens which were never backed, swaps them, and is
-gone inside a few blocks — long before any human opens a reserve report.
+the BTC held in reserve.**
 
-The reason that check lives in a PDF instead of in the contract is not negligence. **It is
-that no EVM chain could read Bitcoin.** So the one invariant the whole construction rests on
-is the one thing the chain cannot evaluate, and "proof of reserves" means a screenshot.
+Let us be precise about the state of the art, because the lazy version of this pitch is
+wrong. That promise *is* monitored today. Chainlink publishes a WBTC proof-of-reserve feed,
+and its Secure Mint pattern already gates minting on it. The problem is not that nobody
+looks.
 
-Bitcoin Witness removes that excuse. A Creditcoin contract can now read a Bitcoin reserve
-balance, proven from Bitcoin itself, with no custodian asserting anything — which means the
-invariant stops being a report and becomes a **precondition of the mint transaction**. An
-unbacked mint is not flagged an hour later. It reverts.
+**The problem is what the contract is actually looking at.** A reserve feed is an
+*assertion*. A committee of oracle nodes reads a Bitcoin node off chain, agrees on a number,
+signs it, and posts it. The consuming contract cannot check that number against anything — it
+can only trust the signers, and trust the address list those signers were pointed at. The
+reserve is reported to the chain, never proven to it.
+
+That was not laziness on anyone's part. It was the only thing available, because **no EVM
+chain could read Bitcoin**. When the underlying asset is invisible to the virtual machine,
+"proof of reserves" can only mean "somebody's signature on a number".
+
+Bitcoin Witness changes what arrives. The reserve reaches Creditcoin as a fact derived from
+Bitcoin's own proof-of-work-verified UTXO set, carried by an Attestcoin attestation over a
+real exSat block, and checked on chain by the BlockProver precompile. The contract verifies
+evidence instead of trusting a reporter — and then refuses to mint against reserves that are
+not there. An unbacked mint is not flagged afterwards. It reverts.
 
 ## 2. The insight
 
@@ -163,10 +171,18 @@ Most hackathon projects say "trustless" and stop. Here is the actual trust model
   Bitcoin's tip that is. An oracle that shows the age of its data is more honest than one that
   pretends it is always fresh.
 
-What we removed is not *all* trust. It is **discretionary** trust — the custodian who could
-choose to lie. Every remaining assumption is a public, adversarial, economically-secured
-consensus that anyone can check. That is a categorically different thing from a multisig
-promising an audit next quarter.
+What we removed is not *all* trust. It is **discretionary** trust — the party who could simply
+choose to report a different number. Every remaining assumption is a public, adversarial,
+economically-secured consensus that anyone can check.
+
+We are careful about how that compares to an oracle reserve feed, because the difference is
+real but it is not "trust versus no trust". Both designs end in a quorum. The difference is
+what the quorum is asked to do: an oracle committee is asked to *assert a balance it read off
+chain*, and the contract has no way to disagree; Attestcoin's quorum is asked to attest a
+**block header**, and the contract then verifies, itself, that the fact was inside that block
+and that the block belongs to the chain. Corrupting the first produces a wrong number nobody
+can detect from on chain. Corrupting the second means forging exSat's history — which also
+means forging the Bitcoin data exSat's validators endorsed under proof of work.
 
 We also scoped v1 down on purpose: it proves *"UTXO (txid, index) exists and holds N sats."*
 Not the script, not the address, not spend history. One fact, all the way through, verifiable
@@ -196,8 +212,9 @@ Once a Creditcoin contract can read a Bitcoin fact, the things built on top are 
 - **Solvency as a transaction precondition.** Any issuer of a Bitcoin-backed token can adopt
   `ReserveGuard` as-is. The exploit class that cost the industry billions — mint more than is
   locked, exit in the same block — stops being profitable, because the mint does not execute.
-- **Proof of reserves that isn't a PDF.** The same reserve number, read by anyone, any block,
-  with no custodian statement in the loop and nothing to take on faith between audits.
+- **Proof of reserves that is actually a proof.** Not a number a committee signed after
+  reading a node, but one the reading contract verifies for itself, at outpoint granularity,
+  in the same transaction it acts on.
 - **Proof of payment.** A payment is an event, not a balance, so a point-in-time proof is
   exactly the right instrument for it — "this borrower sent 0.4 BTC to this address at height
   N", recorded by Creditcoin as loan repayment. That is Creditcoin's own product: a credit

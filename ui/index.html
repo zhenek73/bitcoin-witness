@@ -4,6 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Bitcoin Witness — The Witness Trail</title>
+  <link rel="icon" type="image/png" href="logo.png" />
+  <link rel="apple-touch-icon" href="logo.png" />
   <meta name="description" content="Proving a fact about Bitcoin on Creditcoin without wrapping, bridging, or moving the BTC. Every number on this page is read live from a public endpoint." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -68,6 +70,15 @@
     .brand {
       font: 800 15px "IBM Plex Mono", monospace; letter-spacing: .22em;
       color: #fff; animation: bwGlow 3.5s ease-in-out infinite;
+    }
+    .ident { display: flex; align-items: center; gap: 13px; }
+    .ident img {
+      width: 46px; height: 46px; flex: 0 0 46px; border-radius: 11px; display: block;
+      box-shadow: 0 0 0 1px rgba(255,176,32,.22), 0 6px 20px rgba(0,0,0,.45);
+    }
+    @media (max-width: 520px) {
+      .ident img { width: 36px; height: 36px; flex-basis: 36px; border-radius: 9px; }
+      .brand { font-size: 13px; letter-spacing: .16em; }
     }
     .path {
       margin-top: 7px; font: 500 13px "IBM Plex Mono", monospace; color: var(--muted);
@@ -341,9 +352,12 @@
   <div class="bg-grid"></div>
   <div class="wrap">
     <header class="top">
-      <div>
-        <div class="brand">BITCOIN WITNESS</div>
-        <div class="path">exSat &#9656; Attestcoin &#9656; Creditcoin</div>
+      <div class="ident">
+        <img src="logo.png" alt="Bitcoin Witness" width="480" height="480" />
+        <div>
+          <div class="brand">BITCOIN WITNESS</div>
+          <div class="path">exSat &#9656; Attestcoin &#9656; Creditcoin</div>
+        </div>
       </div>
       <button class="icon" id="gear" title="Creditcoin endpoints" aria-label="Settings">⚙</button>
     </header>
@@ -456,9 +470,10 @@
             <div class="panel-body">
               <h2 class="sec">WHAT THE PROOF IS FOR</h2>
               <p class="sec-lede">
-                Every wrapped Bitcoin rests on one rule — supply must never exceed reserves — and
-                today that rule is checked by an auditor, weeks later, off chain. Here it is a
-                precondition of the mint transaction, reading a reserve proven from Bitcoin itself.
+                Wrapped Bitcoin does get reserve feeds today — but a feed is an assertion: an
+                oracle committee reads a Bitcoin node off chain and signs a number the contract
+                cannot check. Here the reserve arrives as a proof the contract verifies itself,
+                and the mint refuses to execute when it does not hold.
               </p>
               <p class="skel" id="solvSkel">reading the guard on the Creditcoin devnet…</p>
               <div id="solvBody" style="display:none"></div>

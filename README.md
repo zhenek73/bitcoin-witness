@@ -10,14 +10,18 @@ Built for [BUIDL CTC 2026 Fall](https://dorahacks.io/hackathon/buidl-ctc-2026-fa
 ## The problem
 
 Every wrapped Bitcoin rests on one invariant: the supply on this chain never exceeds the BTC
-held in reserve. That invariant is checked off chain, after the fact, by an auditor, on a
-schedule — while the mint transaction itself asks no questions at all. The large bridge losses
-of recent years are all the same shape: mint tokens that were never backed, exit within a few
-blocks, long before a human opens a reserve report.
+held in reserve.
 
-The check lives in a PDF rather than in the contract for one reason: **no EVM chain could read
-Bitcoin.** The BTC never has to move for the *fact* about it to be useful — what was missing
-was a way to move the fact.
+That invariant *is* monitored today — Chainlink publishes a WBTC proof-of-reserve feed, and
+mints can already be gated on it. The problem is not that nobody looks. The problem is what
+the contract is looking at: a reserve feed is an **assertion**. A committee of oracle nodes
+reads a Bitcoin node off chain, agrees on a number, signs it, and posts it. The consuming
+contract cannot check that number against anything — it can only trust the signers and the
+address list they were pointed at. The reserve is reported to the chain, never proven to it.
+
+That was the only thing available, because **no EVM chain could read Bitcoin.** The BTC never
+has to move for the *fact* about it to be useful — what was missing was a way to move the
+fact, as evidence rather than as testimony.
 
 ## What Bitcoin Witness does
 
@@ -66,9 +70,9 @@ function mint(address to, uint256 amount) external onlyIssuer {
 }
 ```
 
-Every wrapped-BTC system already has the invariant `supply <= reserves`. Today it is checked
-off chain, after the fact, by an auditor — because no EVM chain could read Bitcoin. This makes
-it a precondition of the mint transaction instead. `NaiveWBTC`, the same token without the
+The number it reads is not one anybody asserted. It comes from Bitcoin's own
+proof-of-work-verified UTXO set, through an Attestcoin attestation over a real exSat block,
+and the BlockProver precompile checks it on chain. `NaiveWBTC`, the same token without the
 guard, is deployed alongside as the control case, so the difference can be demonstrated rather
 than asserted: `node scripts/demo_solvency.mjs`.
 
