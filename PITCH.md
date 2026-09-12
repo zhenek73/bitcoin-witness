@@ -7,15 +7,21 @@ BUIDL CTC 2026 Fall · exSat + Attestcoin + Creditcoin
 
 ## 1. The problem, in one paragraph
 
-Every time Bitcoin is used as collateral on another chain, it gets wrapped. WBTC, cbBTC,
-tBTC — all of them work the same way underneath: someone holds the real BTC, and everyone
-else trusts a report about what they hold. That trust has failed before and will fail again,
-and it fails in the worst possible way — silently, until the day it doesn't.
+Every wrapped Bitcoin carries exactly one promise: **the supply on this chain never exceeds
+the BTC held in reserve.** Nobody checks that promise at the moment it matters. It is checked
+off chain, after the fact, by an auditor, on a schedule — while the mint transaction itself
+asks no questions at all. The large bridge losses of the last few years are all the same
+shape: an attacker finds a path that mints tokens which were never backed, swaps them, and is
+gone inside a few blocks — long before any human opens a reserve report.
 
-But here is the thing nobody says out loud: **a lending protocol does not need your Bitcoin.
-It needs to know your Bitcoin is real.** We wrap BTC because moving the asset is the only
-way we know to move the *fact* about it. That is a tooling limitation dressed up as a
-financial primitive.
+The reason that check lives in a PDF instead of in the contract is not negligence. **It is
+that no EVM chain could read Bitcoin.** So the one invariant the whole construction rests on
+is the one thing the chain cannot evaluate, and "proof of reserves" means a screenshot.
+
+Bitcoin Witness removes that excuse. A Creditcoin contract can now read a Bitcoin reserve
+balance, proven from Bitcoin itself, with no custodian asserting anything — which means the
+invariant stops being a report and becomes a **precondition of the mint transaction**. An
+unbacked mint is not flagged an hour later. It reverts.
 
 ## 2. The insight
 
@@ -35,11 +41,11 @@ Creditcoin.**
 ## 3. What we built
 
 ```
-Bitcoin  ──►  exSat native index  ──►  exSat EVM  ──►  Attestcoin  ──►  Creditcoin
-              (utxomng.xsat)          (event)         (attestation)    (on-chain fact)
+Bitcoin ──► exSat native index ──► exSat EVM ──► Attestcoin ──► Creditcoin ──► ReserveGuard
+            (utxomng.xsat)        (event)       (attestation)  (proven fact)  (mint reverts)
 ```
 
-Four pieces, all deployed and all running:
+Five pieces, all deployed and all running:
 
 1. **`btcwitness11`** — an Antelope C++ contract, live on **EOS mainnet**, that reads a Bitcoin
    UTXO straight out of exSat's `utxomng.xsat` table and relays it into exSat's EVM through an
@@ -60,8 +66,41 @@ Four pieces, all deployed and all running:
    signature, right relayer, successful receipt. A caller chooses only *which* proven transaction
    to submit — never what it says. 9 tests, 5 of them negative paths.
 
-**Four different Bitcoin UTXOs have gone the whole way and read back `proven = true` on
-Creditcoin.** Four, not one — this is reproducible, not a lucky run.
+5. **`ReserveGuard` + `GuardedWBTC`** — the part that turns a proven fact into a safety
+   property. `ReserveGuard` sums the proven, still-fresh value of the outpoints an issuer has
+   declared as reserve, and `GuardedWBTC.mint` consults it before creating a single token.
+   One external view call stands between an attacker and unbacked supply.
+
+**Five different Bitcoin UTXOs have gone the whole way and read back `proven = true` on
+Creditcoin.** Five, not one — this is reproducible, not a lucky run.
+
+### The one line that matters
+
+```solidity
+function mint(address to, uint256 amount) external onlyIssuer {
+    guard.checkMint(amount);   // reverts unless supply stays within proven Bitcoin reserves
+    _mint(to, amount);
+}
+```
+
+`scripts/demo_solvency.mjs` runs this against the live devnet, in five beats, all on chain:
+
+| # | | Result |
+|---|---|---|
+| 1 | issuer declares a real Bitcoin outpoint as reserve | 50 BTC counted, proven 30s ago |
+| 2 | backed mint of 10 gwBTC | **succeeds** |
+| 3 | attacker mints 50,000 gwBTC | **reverts** — `Insolvent(50010, 50, 0)` |
+| 4 | *same attack on an unguarded token* | **succeeds** — 49,950 unbacked, no error |
+| 5 | reserve proof allowed to age out | even **1 satoshi reverts** |
+
+Beat 4 is the control case, deployed on purpose. It is how wrapped BTC is issued today: a
+valid transaction by every rule the chain knows, because the chain does not know what the
+reserve is.
+
+Beat 5 is the property that makes this safe to rely on. Proofs have latency, so the number is
+always the reserve as of some minutes ago — and a deposit not yet proven is simply **not
+counted**. Lag makes the guard stricter, never more permissive. It fails closed by
+construction.
 
 We can make a stronger claim than "it ran once", because we were forced to prove it. A machine
 restart wiped the devnet chain — the node had been running without persistent storage, so the
@@ -133,14 +172,39 @@ We also scoped v1 down on purpose: it proves *"UTXO (txid, index) exists and hol
 Not the script, not the address, not spend history. One fact, all the way through, verifiable
 by a judge in real time — instead of five facts half-wired.
 
+And the guard has three limits we would rather state than have someone find:
+
+- **It stops inflation, not theft.** An attacker who drains already-backed tokens out of a
+  pool leaves supply and reserves both unchanged; the invariant holds and the guard will not
+  object. The claim is "you cannot print what is not there" — never "funds cannot be stolen".
+- **The issuer declares which outpoints are its reserve.** A lying issuer is still a lying
+  issuer. What changes is that the lie becomes a single public, permanent, checkable statement
+  instead of a recurring private assertion — and because outpoints are globally unique, two
+  issuers claiming the same reserve is detectable by anyone.
+- **A proven UTXO can be spent the next block.** That is what the freshness window is for, and
+  why it fails closed: a fact past its window stops counting toward reserves entirely.
+
+Proving a UTXO exists is *not* a liquidatable collateral claim, and we do not pitch it as one.
+Seizing Bitcoin on default needs a lock on the Bitcoin side — multisig, timelock, DLC,
+covenant. Bitcoin Witness is the proof layer such a lock would report through; it is not the
+lock. We would rather ship a narrow claim that holds than a broad one that does not.
+
 ## 6. Why this matters beyond the demo
 
 Once a Creditcoin contract can read a Bitcoin fact, the things built on top are not exotic:
 
-- **Proof of reserves that isn't a PDF.** An exchange publishes UTXO ids; anyone proves the
-  balances on-chain, no custodian statement involved.
-- **BTC-collateralized credit without wrapping.** Creditcoin is a credit chain. Underwriting a
-  loan against Bitcoin you can *verify* but never *touch* is the exact shape of its thesis.
+- **Solvency as a transaction precondition.** Any issuer of a Bitcoin-backed token can adopt
+  `ReserveGuard` as-is. The exploit class that cost the industry billions — mint more than is
+  locked, exit in the same block — stops being profitable, because the mint does not execute.
+- **Proof of reserves that isn't a PDF.** The same reserve number, read by anyone, any block,
+  with no custodian statement in the loop and nothing to take on faith between audits.
+- **Proof of payment.** A payment is an event, not a balance, so a point-in-time proof is
+  exactly the right instrument for it — "this borrower sent 0.4 BTC to this address at height
+  N", recorded by Creditcoin as loan repayment. That is Creditcoin's own product: a credit
+  history made of real settlements rather than self-reported ones.
+- **Creditworthiness without seizure.** "This address has controlled 2 BTC for three years" is
+  a strong underwriting signal for undercollateralized credit — which is Creditcoin's thesis —
+  and it needs no ability to take the Bitcoin at all.
 - **A general Bitcoin-fact oracle.** Block headers, spends, script conditions — same pipe,
   richer payloads. The hard part was the pipe.
 
@@ -159,17 +223,23 @@ root-caused against live chain data rather than guessed at.
 
 | Piece | State |
 |---|---|
-| Native relay contract | **deployed, EOS mainnet** (`btcwitness11`), 6 real relays |
-| EVM receiver | **deployed, exSat EVM mainnet**, 6 `BitcoinUtxoAttested` events |
+| Native relay contract | **deployed, EOS mainnet** (`btcwitness11`), 7 real relays |
+| EVM receiver | **deployed, exSat EVM mainnet**, 7 `BitcoinUtxoAttested` events |
 | Creditcoin devnet + exSat registered | **working** (`chain_key 7`), rebuildable in one command |
 | Attestor against exSat mainnet | **working** — attesting live exSat blocks |
 | Creditcoin verifier | **deployed**, 9 tests incl. 5 negative paths |
-| Live end-to-end run | **done — 4 UTXOs proven**, transcript in repo |
+| `ReserveGuard` + `GuardedWBTC` + control | **deployed**, 5-beat solvency demo passing |
+| Live end-to-end run | **done — 5 UTXOs proven**, transcript in repo |
 
 Everything above was verified against running software and live chain queries, not inferred from
 source.
 
 ---
 
-*Demo: `npx tsx scripts/demo.ts --txid <btc_txid> --index <vout>` — prints every hop, with an
+*Demo, part one — prove a Bitcoin fact:
+`npx tsx scripts/demo.ts --txid <btc_txid> --index <vout>` — prints every hop, with an
 explorer link for each, so you can check the claim rather than take it.*
+
+*Demo, part two — put that fact to work:
+`node scripts/demo_solvency.mjs` — declares the proven UTXO as reserve, mints against it,
+then watches an unbacked mint revert on chain while the unguarded control mints it happily.*

@@ -9,11 +9,15 @@ Built for [BUIDL CTC 2026 Fall](https://dorahacks.io/hackathon/buidl-ctc-2026-fa
 
 ## The problem
 
-Today, using Bitcoin in DeFi on another chain almost always means wrapping it — WBTC, cbBTC,
-tBTC — which means trusting a custodian to hold the real BTC and honestly report what it holds.
-That custodian can lie, get hacked, or disappear. The Bitcoin itself never has to move for the
-*fact* about it to be useful — a lending protocol doesn't need your BTC, it needs to know it's
-real.
+Every wrapped Bitcoin rests on one invariant: the supply on this chain never exceeds the BTC
+held in reserve. That invariant is checked off chain, after the fact, by an auditor, on a
+schedule — while the mint transaction itself asks no questions at all. The large bridge losses
+of recent years are all the same shape: mint tokens that were never backed, exit within a few
+blocks, long before a human opens a reserve report.
+
+The check lives in a PDF rather than in the contract for one reason: **no EVM chain could read
+Bitcoin.** The BTC never has to move for the *fact* about it to be useful — what was missing
+was a way to move the fact.
 
 ## What Bitcoin Witness does
 
@@ -48,24 +52,56 @@ Creditcoin  —  verifies the proof on-chain, exposes the Bitcoin fact
 
 No bridge. No wrapped token. No custodian. The BTC never leaves Bitcoin.
 
+### What the fact is for
+
+A proven Bitcoin fact is only interesting if something acts on it. `ReserveGuard` is the first
+consumer: it sums the proven, still-fresh value of the outpoints an issuer has declared as
+reserve, and `GuardedWBTC.mint` refuses to create a token that would push wrapped supply above
+that number.
+
+```solidity
+function mint(address to, uint256 amount) external onlyIssuer {
+    guard.checkMint(amount);   // reverts unless supply stays within proven Bitcoin reserves
+    _mint(to, amount);
+}
+```
+
+Every wrapped-BTC system already has the invariant `supply <= reserves`. Today it is checked
+off chain, after the fact, by an auditor — because no EVM chain could read Bitcoin. This makes
+it a precondition of the mint transaction instead. `NaiveWBTC`, the same token without the
+guard, is deployed alongside as the control case, so the difference can be demonstrated rather
+than asserted: `node scripts/demo_solvency.mjs`.
+
+It stops **inflation**, not theft — an attacker draining already-backed tokens leaves the
+invariant intact. And latency makes it stricter, never looser: an unproven or stale reserve
+simply stops counting, so the guard fails closed.
+
 ## Status
 
-**Working end to end on live networks.** Three real Bitcoin UTXOs have been carried from exSat's
-on-chain Bitcoin index all the way to a verified, readable fact on Creditcoin.
+**Working end to end on live networks.** Five real Bitcoin UTXOs have been carried from exSat's
+on-chain Bitcoin index all the way to a verified, readable fact on Creditcoin — and a wrapped
+token on Creditcoin now mints against one of them under an on-chain solvency check.
 
 | Component | Where | Address / identity |
 |---|---|---|
 | Native relay contract | **EOS mainnet** | [`btcwitness11`](https://bloks.io/account/btcwitness11) |
 | EVM receiver | **exSat EVM mainnet** (chain 7200) | [`0xBF823785C5749532AE927d7285093Eae279fe16C`](https://scan.exsat.network/address/0xBF823785C5749532AE927d7285093Eae279fe16C) |
-| Attestcoin attestor | self-hosted CC3 devnet | attesting live exSat blocks, `chain_key 8` |
-| Fact verifier | self-hosted CC3 devnet | `0x3ed62137c5DB927cb137c26455969116BF0c23Cb` |
+| Attestcoin attestor | self-hosted CC3 devnet | attesting live exSat blocks, `chain_key 7` |
+| Fact verifier | self-hosted CC3 devnet | `0xc01Ee7f10EA4aF4673cFff62710E1D7792aBa8f3` |
+| Reserve guard | self-hosted CC3 devnet | `0x21cb3940e6Ba5284E1750F1109131a8E8062b9f1` |
+| Guarded wrapped BTC | self-hosted CC3 devnet | `0x3469E1DaC06611030AEce8209F07501E9A7aCC69` |
+| Unguarded control token | self-hosted CC3 devnet | `0x7d4567B7257cf869B01a47E8cf0EDB3814bDb963` |
 
-**5 real relays** emitted `BitcoinUtxoAttested` on exSat EVM mainnet (blocks 59791789, 59800885,
-59801138, 59801283, 59801416); **3 of them are proven on Creditcoin** with `proven = true`.
-Three different UTXOs, not one lucky run.
+**7 real relays** emitted `BitcoinUtxoAttested` on exSat EVM mainnet; **5 of them are proven on
+Creditcoin** with `proven = true`. Five different UTXOs, not one lucky run.
 
-Full transcript of a complete six-step run:
-[`docs/demo-transcript-2026-09-01.txt`](docs/demo-transcript-2026-09-01.txt).
+The devnet addresses above are local by nature — a self-hosted CC3 chain is rebuilt from
+genesis by `devnet/bootstrap-devnet.mjs`, and the deployment scripts write the current
+addresses into `scripts/verifier-deployment.json` and `scripts/guard-deployment.json`.
+
+Full transcripts of complete runs:
+[six-step pipeline](docs/demo-transcript-2026-09-01.txt) ·
+[solvency guard](docs/demo-solvency-transcript-2026-09-12.txt).
 
 Two integration defects found and documented along the way:
 [attestor](docs/BUG-attestor-zero-receipts-root.md) · [exSat](docs/BUG-exsat-zero-receipts-root.md).
@@ -100,6 +136,18 @@ npx tsx scripts/demo.ts --txid <btc_txid> --index <vout>
 
 Prints every hop with an explorer link for each, so the claim can be checked rather than taken.
 The Creditcoin half needs the self-hosted devnet from [`devnet/`](devnet/) running.
+
+Then put the proven fact to work:
+
+```bash
+node scripts/deploy_guard.mjs      # ReserveGuard + GuardedWBTC + the unguarded control
+node scripts/demo_solvency.mjs     # declare reserve, mint, watch an unbacked mint revert
+```
+
+`demo_solvency.mjs` runs five beats against the live devnet: declare a real Bitcoin outpoint as
+reserve, mint 10 gwBTC against 50 BTC proven, watch a 50,000 gwBTC mint revert with
+`Insolvent(...)`, watch the *unguarded* token accept the same attack without complaint, and
+finally let the reserve proof age out and see even one satoshi refused.
 
 ## Architecture
 

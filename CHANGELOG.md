@@ -1,5 +1,37 @@
 # Changelog
 
+## 2026-09-12 (14)
+### Added — `ReserveGuard`: the invariant moves from the audit report into the transaction
+- A proven Bitcoin fact is only worth something if a contract acts on it. `ReserveGuard`
+  (`contracts/asc/ReserveGuard.sol`) sums the proven, still-fresh value of the outpoints an
+  issuer declares as reserve and exposes `checkMint(amount)`, which reverts with
+  `Insolvent(supplyAfter, provenReserves, staleOutpoints)` unless wrapped supply stays within
+  the Bitcoin actually proven to exist.
+- `GuardedWBTC` calls it in one line before minting. `NaiveWBTC` — the same token without the
+  guard — is deployed alongside **on purpose**, as the control case. Without a side-by-side the
+  claim is rhetoric; with it, the difference is a transaction receipt.
+- `scripts/demo_solvency.mjs` runs five beats against the live devnet: declare reserve, backed
+  mint succeeds, unbacked mint reverts, the unguarded control accepts the identical attack, and
+  an aged-out proof refuses even one satoshi. Transcript in
+  `docs/demo-solvency-transcript-2026-09-12.txt`.
+
+### Changed — the pitch no longer claims Bitcoin as liquidatable collateral
+- The previous framing ("prove a UTXO, use it as loan collateral") does not survive scrutiny: a
+  point-in-time existence proof is not seizable, does not establish ownership on its own, and
+  the same outpoint can be pledged to several protocols at once. That was a hole in the
+  *application*, not in the primitive, and it is better found by us than by a judge.
+- Reframed around what a point-in-time proof is genuinely the right instrument for: runtime
+  solvency enforcement, proof of reserves, proof of payment, and creditworthiness signals.
+  `PITCH.md` §5 now states the guard's three limits explicitly — it stops inflation and not
+  theft, the issuer still declares its own outpoints, and a proven UTXO can be spent the next
+  block.
+
+### Added — freshness is a safety property, not a caveat
+- `maxFactAge` drops stale facts out of the reserve total entirely. The direction of that error
+  matters and is now stated wherever the guard is described: an unproven or stale deposit simply
+  is not counted, so proof latency makes the guard **stricter**, never more permissive. It fails
+  closed by construction.
+
 ## 2026-08-29 (12)
 ### Fixed — SECURITY: anyone could have proven a fabricated Bitcoin fact
 - `BitcoinFactVerifier` checked the transaction recipient, the emitting contract, the event

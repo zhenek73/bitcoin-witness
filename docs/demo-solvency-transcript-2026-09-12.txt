@@ -1,0 +1,71 @@
+Bitcoin Witness -- runtime solvency guard
+  Creditcoin RPC : http://127.0.0.1:9944
+  verifier       : 0xc01Ee7f10EA4aF4673cFff62710E1D7792aBa8f3
+  ReserveGuard   : 0x21cb3940e6Ba5284E1750F1109131a8E8062b9f1  (maxFactAge 21600s)
+  GuardedWBTC    : 0x3469E1DaC06611030AEce8209F07501E9A7aCC69
+  NaiveWBTC      : 0x7d4567B7257cf869B01a47E8cf0EDB3814bDb963
+
+--------------------------------------------------------------------------
+[1] Issuer declares its Bitcoin reserve
+  declared 0xc361e2f4581f035dd58b99788347884e046e47b4c17ec347344ff8b24cd377ec:0
+    50 BTC, proven from exSat height 60793963, 30s old
+
+  state:
+    proven reserve : 50 BTC  (1 outpoint(s) counted, 0 ignored)
+    wrapped supply : 0 gwBTC
+    solvent        : YES
+
+--------------------------------------------------------------------------
+[2] A backed mint -- should succeed
+  issuer mints 10 gwBTC against 50 BTC proven
+  OK  tx 0x953c1abfb5c164d8e68e88eead755862b6703a873dd0cbb6dccea2590b1596d3  gas 149716
+
+  state:
+    proven reserve : 50 BTC  (1 outpoint(s) counted, 0 ignored)
+    wrapped supply : 10 gwBTC
+    solvent        : YES
+
+--------------------------------------------------------------------------
+[3] An unbacked mint -- the attacker case
+  attacker reaches the mint path and asks for 50,000 gwBTC
+  REVERTED: Insolvent
+    supply would become : 50,010 gwBTC
+    proven reserve      : 50 BTC
+    outpoints ignored   : 0 (unproven or stale)
+  The tokens were never created. Nothing to launder, nothing to exit with.
+
+  state (unchanged):
+    proven reserve : 50 BTC  (1 outpoint(s) counted, 0 ignored)
+    wrapped supply : 10 gwBTC
+    solvent        : YES
+
+--------------------------------------------------------------------------
+[4] The control: the same attack on an unguarded token
+  attacker asks NaiveWBTC for the same 50,000 nwBTC
+  MINTED  tx 0x478e5892caab0732480a58402d2f3a78934b28443e9159c6c32d96e7cf35760b
+    nwBTC supply       : 50,000
+    Bitcoin backing it : 50
+    unbacked           : 49,950
+  No revert, no alert, no error. A valid transaction by every rule the
+  chain knows -- because the chain does not know what the reserve is.
+  This is how wrapped BTC is issued today.
+
+--------------------------------------------------------------------------
+[5] Stale proof -- the guard fails closed
+  issuer stops re-proving reserves (simulated: freshness window -> 1s)
+
+  state:
+    proven reserve : 0 BTC  (0 outpoint(s) counted, 1 ignored)
+    wrapped supply : 10 gwBTC
+    solvent        : NO
+
+  The Bitcoin is still there. The PROOF is old, so it stops counting.
+  Try to mint one single satoshi:
+  REVERTED: Insolvent (reserve counted: 0 BTC)
+  Latency makes this stricter, never more permissive. An unproven deposit
+  is simply not counted, so the error direction is always conservative.
+
+  restoring freshness window to 21600s
+
+--------------------------------------------------------------------------
+Done.
