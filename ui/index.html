@@ -291,6 +291,7 @@
     }
     .pill.yes { background: rgba(57,255,143,.14); color: var(--ok); }
     .pill.unk { background: rgba(255,255,255,.06); color: var(--muted); }
+    .pill.no { background: rgba(255, 86, 86, .16); color: #ff8f8f; }
 
     /* ---------- pipe ---------- */
     .boxes { display: flex; flex-direction: column; gap: 0; }
@@ -448,6 +449,22 @@
             </div>
           </div>
         </section>
+
+        <section class="card">
+          <div class="panel">
+            <div class="winbar"><i class="d1"></i><i class="d2"></i><i class="d3"></i><span>THE INVARIANT, ENFORCED</span></div>
+            <div class="panel-body">
+              <h2 class="sec">WHAT THE PROOF IS FOR</h2>
+              <p class="sec-lede">
+                Every wrapped Bitcoin rests on one rule — supply must never exceed reserves — and
+                today that rule is checked by an auditor, weeks later, off chain. Here it is a
+                precondition of the mint transaction, reading a reserve proven from Bitcoin itself.
+              </p>
+              <p class="skel" id="solvSkel">reading the guard on the Creditcoin devnet…</p>
+              <div id="solvBody" style="display:none"></div>
+            </div>
+          </div>
+        </section>
       </div>
 
       <div class="hero">
@@ -513,6 +530,25 @@
       RECEIVER: "0xBF823785C5749532AE927d7285093Eae279fe16C",
       NATIVE_DEPLOY_TX: "6d563fadb639e80aab743af0c54f6075430c2cdd8ed138772602f6c0cdcaeec6",
       VERIFIER: "0xc01Ee7f10EA4aF4673cFff62710E1D7792aBa8f3",
+      // The solvency layer. Written by scripts/deploy_guard.mjs into
+      // scripts/guard-deployment.json; update all four together if redeployed.
+      GUARD: "0x21cb3940e6Ba5284E1750F1109131a8E8062b9f1",
+      GUARDED_WBTC: "0x3469E1DaC06611030AEce8209F07501E9A7aCC69",
+      NAIVE_WBTC: "0x7d4567B7257cf869B01a47E8cf0EDB3814bDb963",
+      // The issuer. Mints are simulated with eth_call from this address, so the
+      // page never holds a key and never sends a transaction.
+      ISSUER: "0xf24FF3a9CF04c71Dbc94D0b566f7A27B94566cac",
+      GUARD_ABI: [
+        "function solvency() view returns (uint256 provenReserveSats, uint256 wrappedSupply, uint256 countedOutpoints, uint256 staleOutpoints, bool solvent)",
+        "function maxFactAge() view returns (uint64)",
+        "function reserveCount() view returns (uint256)",
+        "function reserveAt(uint256 i) view returns (bytes32 txid, uint32 index)",
+        "error Insolvent(uint256 supplyAfter, uint256 provenReserves, uint256 staleOutpoints)"
+      ],
+      TOKEN_ABI: [
+        "function mint(address to, uint256 amount)",
+        "function totalSupply() view returns (uint256)"
+      ],
       CHAIN_INFO: "0x0000000000000000000000000000000000000fd3",
       ATTESTOR: "5CB4odFpzLL7MFFcr12VX18YgEvJegpXkdvkeYun77hUKtc5",
       ATTESTATION_HEIGHT: 60673341,
@@ -1463,11 +1499,185 @@
       box.style.display = "block";
     }
 
+    /* =====================  solvency guard  ===================== */
+
+    const btc = (sats) => (Number(sats) / 1e8).toLocaleString("en-US", { maximumFractionDigits: 8 });
+
+    /**
+     * Simulate a mint with eth_call from the issuer's address. Nothing is
+     * signed and nothing is sent — the chain is asked what *would* happen
+     * against its current state, which is exactly the question the guard
+     * answers. A real transaction would get the identical answer.
+     */
+    async function simulateMint(token, amount) {
+      try {
+        await token.mint.staticCall(CFG.ISSUER, amount, { from: CFG.ISSUER });
+        return { ok: true };
+      } catch (e) {
+        const r = e.revert;
+        if (r && r.name === "Insolvent") {
+          return {
+            ok: false,
+            name: "Insolvent",
+            supplyAfter: r.args[0],
+            reserves: r.args[1],
+            stale: r.args[2],
+          };
+        }
+        return { ok: false, name: String(e.shortMessage || e.message || e) };
+      }
+    }
+
+    function verdictRow(label, sub, res) {
+      const tr = el("tr");
+      const c1 = el("td");
+      c1.appendChild(el("div", null, label));
+      const s = el("div", "src", sub);
+      s.style.textTransform = "none";
+      s.style.letterSpacing = "0";
+      c1.appendChild(s);
+      const c2 = el("td");
+      c2.appendChild(
+        res.ok
+          ? el("span", "pill yes", "mint succeeds")
+          : el("span", "pill no", res.name === "Insolvent" ? "reverts — Insolvent" : "reverts")
+      );
+      tr.append(c1, c2);
+      return tr;
+    }
+
+    async function loadSolvency() {
+      const skel = $("solvSkel");
+      const box = $("solvBody");
+      const ccUrl = $("ccRpc").value.trim();
+
+      let guard, guarded, naive;
+      try {
+        await ccPing(ccUrl);
+        const cc = new ethers.JsonRpcProvider(ccUrl, 42, { staticNetwork: true });
+        const tokenAbi = CFG.TOKEN_ABI.concat([
+          "error Insolvent(uint256 supplyAfter, uint256 provenReserves, uint256 staleOutpoints)",
+        ]);
+        guard = new ethers.Contract(CFG.GUARD, CFG.GUARD_ABI, cc);
+        guarded = new ethers.Contract(CFG.GUARDED_WBTC, tokenAbi, cc);
+        naive = new ethers.Contract(CFG.NAIVE_WBTC, tokenAbi, cc);
+      } catch (e) {
+        skel.textContent = ccUnreachableWhy(ccUrl);
+        return;
+      }
+
+      let s, window_, count;
+      try {
+        [s, window_, count] = await Promise.all([
+          guard.solvency(),
+          guard.maxFactAge(),
+          guard.reserveCount(),
+        ]);
+      } catch (e) {
+        skel.textContent =
+          "The guard could not be read on the devnet: " + String(e.shortMessage || e.message || e);
+        return;
+      }
+
+      box.innerHTML = "";
+
+      /* --- the declared reserve, outpoint by outpoint --- */
+      const n = Number(count);
+      if (n > 0) {
+        const t = el("table", "relays");
+        t.innerHTML = `<thead><tr><th>Declared reserve outpoint</th><th>Counted</th></tr></thead>`;
+        const tb = el("tbody");
+        for (let i = 0; i < n; i++) {
+          const [txid, index] = await guard.reserveAt(i);
+          const fact = await new ethers.Contract(CFG.VERIFIER, CFG.VERIFIER_ABI, guard.runner)
+            .getProvenValue(txid, index)
+            .catch(() => null);
+          const tr = el("tr");
+          const c1 = el("td");
+          c1.appendChild(hashEl(txid.replace(/^0x/, ""), 10));
+          c1.appendChild(document.createTextNode(":" + Number(index)));
+          const c2 = el("td");
+          c2.appendChild(
+            fact && fact.proven
+              ? el("span", "pill yes", btc(fact.value) + " BTC")
+              : el("span", "pill unk", "not proven")
+          );
+          tr.append(c1, c2);
+          tb.appendChild(tr);
+        }
+        t.appendChild(tb);
+        const sc = el("div", "tscroll");
+        sc.appendChild(t);
+        box.appendChild(sc);
+      }
+
+      /* --- the invariant, right now --- */
+      box.appendChild(
+        p(
+          `<b>${btc(s.provenReserveSats)} BTC</b> proven and still fresh ` +
+            `(${s.countedOutpoints} outpoint${s.countedOutpoints === 1n ? "" : "s"} counted, ` +
+            `${s.staleOutpoints} ignored) against <b>${btc(s.wrappedSupply)} gwBTC</b> issued. ` +
+            (s.solvent ? "The invariant holds." : "The invariant does not hold — minting is frozen.")
+        )
+      );
+
+      /* --- three simulations against live chain state --- */
+      const reserves = s.provenReserveSats;
+      const honest = reserves > 0n ? reserves / 5n : 100000000n;
+      const attack = reserves > 0n ? reserves * 1000n : 100000000000n;
+
+      const [a, b, c] = await Promise.all([
+        simulateMint(guarded, honest),
+        simulateMint(guarded, attack),
+        simulateMint(naive, attack),
+      ]);
+
+      const t2 = el("table", "relays");
+      t2.innerHTML = `<thead><tr><th>Simulated mint</th><th>Outcome</th></tr></thead>`;
+      const tb2 = el("tbody");
+      tb2.appendChild(
+        verdictRow(`${btc(honest)} gwBTC`, "backed by the proven reserve", a)
+      );
+      tb2.appendChild(
+        verdictRow(
+          `${btc(attack)} gwBTC`,
+          b.name === "Insolvent"
+            ? `guarded token — reserve counted ${btc(b.reserves)} BTC`
+            : "guarded token",
+          b
+        )
+      );
+      tb2.appendChild(
+        verdictRow(`${btc(attack)} nwBTC`, "the same attack, unguarded token", c)
+      );
+      t2.appendChild(tb2);
+      const sc2 = el("div", "tscroll");
+      sc2.appendChild(t2);
+      box.appendChild(sc2);
+
+      const closing = el("p", "note");
+      closing.innerHTML =
+        "The third row is the control case, deployed on purpose. It is how wrapped BTC is " +
+        "issued today: a valid transaction by every rule the chain knows, because the chain " +
+        "does not know what the reserve is. The guard stops <b>inflation</b>, not theft — " +
+        "draining already-backed tokens leaves the invariant intact. And a reserve proof older " +
+        `than ${fmtN(Number(window_))}s stops counting entirely, so latency makes the guard ` +
+        "stricter, never looser.";
+      box.appendChild(closing);
+      box.appendChild(
+        src(`eth_call · ReserveGuard ${CFG.GUARD} · simulated from the issuer, nothing signed · ${ccUrl}`)
+      );
+
+      skel.style.display = "none";
+      box.style.display = "block";
+    }
+
     /* =====================  boot  ===================== */
 
     runTrail($("txid").value.trim(), $("vout").value.trim() || "0");
     loadSync();
     loadProven();
+    loadSolvency();
   </script>
 </body>
 </html>
