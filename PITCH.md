@@ -100,10 +100,10 @@ function mint(address to, uint256 amount) external onlyIssuer {
 
 | # | | Result |
 |---|---|---|
-| 1 | issuer declares a real Bitcoin outpoint as reserve | 50 BTC counted, proven 30s ago |
-| 2 | backed mint of 10 gwBTC | **succeeds** |
-| 3 | attacker mints 50,000 gwBTC | **reverts** — `Insolvent(50010, 50, 0)` |
-| 4 | *same attack on an unguarded token* | **succeeds** — 49,950 unbacked, no error |
+| 1 | issuer declares its five proven Bitcoin outpoints as reserve | 250 BTC counted |
+| 2 | backed mint of 50 gwBTC | **succeeds** |
+| 3 | attacker mints 250,000 gwBTC | **reverts** — `Insolvent(250050, 250, 0)` |
+| 4 | *same attack on an unguarded token* | **succeeds** — 249,750 unbacked, no error |
 | 5 | reserve proof allowed to age out | even **1 satoshi reverts** |
 
 Beat 4 is the control case, deployed on purpose. It is what a mint path looks like with no

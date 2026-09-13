@@ -99,9 +99,9 @@ chain.
 | EVM receiver | **exSat EVM mainnet** (7200) | `0xBF823785C5749532AE927d7285093Eae279fe16C` — 7 events |
 | Attestcoin attestor | self-hosted CC3 devnet | attesting live exSat blocks, `chain_key 7` |
 | Fact verifier | self-hosted CC3 devnet | `0xc01Ee7f10EA4aF4673cFff62710E1D7792aBa8f3` |
-| Reserve guard | self-hosted CC3 devnet | `0x746DFE0F96789e62CECeeA3CA2a9b5556b3AaD6c` |
-| Guarded wrapped BTC | self-hosted CC3 devnet | `0x294c664f6D63bd1521231a2EeFC26d805ce00a08` |
-| Unguarded control token | self-hosted CC3 devnet | `0x82745827D0B8972eC0583B3100eCb30b81Db0072` |
+| Reserve guard | self-hosted CC3 devnet | `0xD45E290062Bd0D1C640D59C350cA03CC291b37FA` |
+| Guarded wrapped BTC | self-hosted CC3 devnet | `0x6eA3524AD29729b10F324fD2aF967beed9cc4E68` |
+| Unguarded control token | self-hosted CC3 devnet | `0x115f277e8fcE437B1F513A293057D2E396Ac2EC1` |
 
 Five distinct Bitcoin UTXOs have travelled the whole path and read back `proven = true`.
 
@@ -195,10 +195,10 @@ transaction receipt.
 
 | # | Action | Result |
 |---|---|---|
-| 1 | issuer declares a real Bitcoin outpoint as reserve | 50 BTC counted, proven 30s earlier |
-| 2 | backed mint of 10 gwBTC | **succeeds** |
-| 3 | attacker mints 50,000 gwBTC | **reverts** — `Insolvent(50010, 50, 0)` |
-| 4 | the same attack on the unguarded token | **succeeds** — 49,950 unbacked, no error |
+| 1 | issuer declares its five proven Bitcoin outpoints as reserve | 250 BTC counted |
+| 2 | backed mint of 50 gwBTC | **succeeds** |
+| 3 | attacker mints 250,000 gwBTC | **reverts** — `Insolvent(250050, 250, 0)` |
+| 4 | the same attack on the unguarded token | **succeeds** — 249,750 unbacked, no error |
 | 5 | reserve proof allowed to age out | even **1 satoshi reverts** |
 
 ## 8. Trust model, in full

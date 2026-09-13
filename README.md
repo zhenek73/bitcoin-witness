@@ -100,9 +100,9 @@ token on Creditcoin now mints against one of them under an on-chain solvency che
 | EVM receiver | **exSat EVM mainnet** (chain 7200) | [`0xBF823785C5749532AE927d7285093Eae279fe16C`](https://scan.exsat.network/address/0xBF823785C5749532AE927d7285093Eae279fe16C) |
 | Attestcoin attestor | self-hosted CC3 devnet | attesting live exSat blocks, `chain_key 7` |
 | Fact verifier | self-hosted CC3 devnet | `0xc01Ee7f10EA4aF4673cFff62710E1D7792aBa8f3` |
-| Reserve guard | self-hosted CC3 devnet | `0x746DFE0F96789e62CECeeA3CA2a9b5556b3AaD6c` |
-| Guarded wrapped BTC | self-hosted CC3 devnet | `0x294c664f6D63bd1521231a2EeFC26d805ce00a08` |
-| Unguarded control token | self-hosted CC3 devnet | `0x82745827D0B8972eC0583B3100eCb30b81Db0072` |
+| Reserve guard | self-hosted CC3 devnet | `0xD45E290062Bd0D1C640D59C350cA03CC291b37FA` |
+| Guarded wrapped BTC | self-hosted CC3 devnet | `0x6eA3524AD29729b10F324fD2aF967beed9cc4E68` |
+| Unguarded control token | self-hosted CC3 devnet | `0x115f277e8fcE437B1F513A293057D2E396Ac2EC1` |
 
 **7 real relays** emitted `BitcoinUtxoAttested` on exSat EVM mainnet; **5 of them are proven on
 Creditcoin** with `proven = true`. Five different UTXOs, not one lucky run.
@@ -157,7 +157,7 @@ node scripts/demo_solvency.mjs     # declare reserve, mint, watch an unbacked mi
 ```
 
 `demo_solvency.mjs` runs five beats against the live devnet: declare a real Bitcoin outpoint as
-reserve, mint 10 gwBTC against 50 BTC proven, watch a 50,000 gwBTC mint revert with
+reserve, mint 50 gwBTC against 250 BTC proven, watch a 250,000 gwBTC mint revert with
 `Insolvent(...)`, watch the *unguarded* token accept the same attack without complaint, and
 finally let the reserve proof age out and see even one satoshi refused.
 
@@ -171,6 +171,12 @@ stand from nothing. Start there.
 Narrower documents: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) (component-level detail) ·
 [`PITCH.md`](PITCH.md) (the argument) · [`CHANGELOG.md`](CHANGELOG.md) (dated history, including
 every mistake).
+
+## Credits
+
+Music in the demo video by [Dmitrii Kolesnikov (The_Mountain)](https://pixabay.com/users/the_mountain-3616498/),
+from [Pixabay](https://pixabay.com/music/). The licence does not require attribution; it is here
+because someone made something and we used it.
 
 ## License
 

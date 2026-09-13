@@ -129,8 +129,8 @@ query, not inferred from source.
 | Attestcoin attestor against exSat | **working** — attesting live exSat mainnet blocks continuously; header hashes match exSat's own RPC exactly |
 | Creditcoin verification contract (`contracts/asc`) | **deployed** at `0xc01Ee7f10EA4aF4673cFff62710E1D7792aBa8f3`; decoding + authentication covered by 9 tests against real V1-format payloads, incl. 5 negative paths (`contracts/asc/test_verifier.py`) |
 | Proof generation + submission (`scripts/prove_fact.ts`, `scripts/demo.ts`) | **run against live networks** — 5 distinct UTXOs proven end to end, transcript in `docs/demo-transcript-2026-09-01.txt` |
-| Solvency guard (`contracts/asc/ReserveGuard.sol`) | **deployed** at `0x746DFE0F96789e62CECeeA3CA2a9b5556b3AaD6c`; 5-beat demo passing (`docs/demo-solvency-transcript-2026-09-12.txt`) |
-| Guarded token / unguarded control (`contracts/asc/WrappedBTC.sol`) | **deployed** at `0x294c664f6D63bd1521231a2EeFC26d805ce00a08` and `0x82745827D0B8972eC0583B3100eCb30b81Db0072` |
+| Solvency guard (`contracts/asc/ReserveGuard.sol`) | **deployed** at `0xD45E290062Bd0D1C640D59C350cA03CC291b37FA`; 5-beat demo passing (`docs/demo-solvency-transcript-2026-09-12.txt`) |
+| Guarded token / unguarded control (`contracts/asc/WrappedBTC.sol`) | **deployed** at `0x6eA3524AD29729b10F324fD2aF967beed9cc4E68` and `0x115f277e8fcE437B1F513A293057D2E396Ac2EC1` |
 
 Creditcoin-side addresses are on a self-hosted CC3 devnet. That chain is rebuilt from genesis by
 `devnet/bootstrap-devnet.mjs`, and the deploy scripts write the current addresses into
