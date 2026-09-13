@@ -245,8 +245,8 @@ root-caused against live chain data rather than guessed at.
 
 | Piece | State |
 |---|---|
-| Native relay contract | **deployed, EOS mainnet** (`btcwitness11`), 7 real relays |
-| EVM receiver | **deployed, exSat EVM mainnet**, 7 `BitcoinUtxoAttested` events |
+| Native relay contract | **deployed, EOS mainnet** (`btcwitness11`), 12 real relays |
+| EVM receiver | **deployed, exSat EVM mainnet**, 12 `BitcoinUtxoAttested` events |
 | Creditcoin devnet + exSat registered | **working** (`chain_key 7`), rebuildable in one command |
 | Attestor against exSat mainnet | **working** — attesting live exSat blocks |
 | Creditcoin verifier | **deployed**, 9 tests incl. 5 negative paths |

@@ -95,8 +95,8 @@ chain.
 
 | Component | Network | Identity |
 |---|---|---|
-| Native relay contract | **EOS mainnet** | `btcwitness11` — 7 real relays in chain history |
-| EVM receiver | **exSat EVM mainnet** (7200) | `0xBF823785C5749532AE927d7285093Eae279fe16C` — 7 events |
+| Native relay contract | **EOS mainnet** | `btcwitness11` — 12 real relays in chain history |
+| EVM receiver | **exSat EVM mainnet** (7200) | `0xBF823785C5749532AE927d7285093Eae279fe16C` — 12 events |
 | Attestcoin attestor | self-hosted CC3 devnet | attesting live exSat blocks, `chain_key 7` |
 | Fact verifier | self-hosted CC3 devnet | `0xc01Ee7f10EA4aF4673cFff62710E1D7792aBa8f3` |
 | Reserve guard | self-hosted CC3 devnet | `0xD45E290062Bd0D1C640D59C350cA03CC291b37FA` |

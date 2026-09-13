@@ -104,7 +104,7 @@ token on Creditcoin now mints against one of them under an on-chain solvency che
 | Guarded wrapped BTC | self-hosted CC3 devnet | `0x6eA3524AD29729b10F324fD2aF967beed9cc4E68` |
 | Unguarded control token | self-hosted CC3 devnet | `0x115f277e8fcE437B1F513A293057D2E396Ac2EC1` |
 
-**7 real relays** emitted `BitcoinUtxoAttested` on exSat EVM mainnet; **5 of them are proven on
+**12 real relays** emitted `BitcoinUtxoAttested` on exSat EVM mainnet; **5 of them are proven on
 Creditcoin** with `proven = true`. Five different UTXOs, not one lucky run.
 
 The devnet addresses above are local by nature — a self-hosted CC3 chain is rebuilt from

@@ -123,8 +123,8 @@ query, not inferred from source.
 
 | Component | Status |
 |---|---|
-| Native relay contract (`contracts/native`) | **deployed, EOS mainnet** as `btcwitness11`; 7 real relays in chain history |
-| EVM receiver contract (`contracts/evm`) | **deployed, exSat EVM mainnet** at `0xBF823785C5749532AE927d7285093Eae279fe16C`; 7 `BitcoinUtxoAttested` events |
+| Native relay contract (`contracts/native`) | **deployed, EOS mainnet** as `btcwitness11`; 12 real relays in chain history |
+| EVM receiver contract (`contracts/evm`) | **deployed, exSat EVM mainnet** at `0xBF823785C5749532AE927d7285093Eae279fe16C`; 12 `BitcoinUtxoAttested` events |
 | Creditcoin devnet + exSat registration (`devnet/`) | **working** — exSat registered as source chain (chain_key 7, chainId 7200, encoding V1), confirmed via the ChainInfo precompile; rebuildable from genesis in one command (`devnet/bootstrap-devnet.mjs`) |
 | Attestcoin attestor against exSat | **working** — attesting live exSat mainnet blocks continuously; header hashes match exSat's own RPC exactly |
 | Creditcoin verification contract (`contracts/asc`) | **deployed** at `0xc01Ee7f10EA4aF4673cFff62710E1D7792aBa8f3`; decoding + authentication covered by 9 tests against real V1-format payloads, incl. 5 negative paths (`contracts/asc/test_verifier.py`) |
