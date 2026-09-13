@@ -10,7 +10,7 @@
  *   2. a backed mint succeeds
  *   3. an unbacked mint REVERTS -- on chain, in the mint transaction
  *   4. the same unbacked mint on an unguarded token SUCCEEDS (the control:
- *      this is how wrapped BTC is issued today)
+ *      what an issuer looks like with no reserve constraint it can verify)
  *   5. reserve proof allowed to go stale -> reserves stop counting -> even a
  *      small mint is refused, showing the failure direction is conservative
  *
@@ -178,7 +178,7 @@ console.log(
   `    unbacked           : ${btc(nSupply - before.reserves)}\n` +
     '  No revert, no alert, no error. A valid transaction by every rule the\n' +
     '  chain knows -- because the chain does not know what the reserve is.\n' +
-    '  This is how wrapped BTC is issued today.'
+    '  This is what a mint path looks like with no reserve constraint it can verify.'
 );
 
 // ---------------------------------------------------------------- beat 5

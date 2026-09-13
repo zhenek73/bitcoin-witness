@@ -1672,9 +1672,10 @@
 
       const closing = el("p", "note");
       closing.innerHTML =
-        "The third row is the control case, deployed on purpose. It is how wrapped BTC is " +
-        "issued today: a valid transaction by every rule the chain knows, because the chain " +
-        "does not know what the reserve is. The guard stops <b>inflation</b>, not theft — " +
+        "The third row is the control case, deployed on purpose. It is what a mint path looks " +
+        "like with no reserve constraint it can verify: a valid transaction by every rule the " +
+        "chain knows, because the chain does not know what the reserve is. " +
+        "The guard stops <b>inflation</b>, not theft — " +
         "draining already-backed tokens leaves the invariant intact. And a reserve proof older " +
         `than ${fmtN(Number(window_))}s stops counting entirely, so latency makes the guard ` +
         "stricter, never looser.";

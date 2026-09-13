@@ -106,9 +106,9 @@ function mint(address to, uint256 amount) external onlyIssuer {
 | 4 | *same attack on an unguarded token* | **succeeds** — 49,950 unbacked, no error |
 | 5 | reserve proof allowed to age out | even **1 satoshi reverts** |
 
-Beat 4 is the control case, deployed on purpose. It is how wrapped BTC is issued today: a
-valid transaction by every rule the chain knows, because the chain does not know what the
-reserve is.
+Beat 4 is the control case, deployed on purpose. It is what a mint path looks like with no
+reserve constraint it can verify: a valid transaction by every rule the chain knows, because
+the chain does not know what the reserve is.
 
 Beat 5 is the property that makes this safe to rely on. Proofs have latency, so the number is
 always the reserve as of some minutes ago — and a deposit not yet proven is simply **not
