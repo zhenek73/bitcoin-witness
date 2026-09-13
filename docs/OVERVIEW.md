@@ -34,11 +34,10 @@ list those signers were pointed at. The reserve is *reported* to the chain, neve
 it.
 
 That was not a failure of imagination. **Bitcoin state has never been natively readable by a
-Creditcoin contract.** The general problem is not unattempted elsewhere — BTC Relay, SPV light
-clients, threshold-signature designs like tBTC — but each attempt buys its own expensive
-trade-off in gas, liveness, or a signer set to trust, and none of them puts Bitcoin state in
-front of a Creditcoin contract. When the underlying asset is not readable, "proof of reserves"
-can only mean "somebody's signature on a number".
+Creditcoin contract.** Other approaches to the general problem — BTC Relay, SPV light clients,
+threshold-signature designs like tBTC — each make their own trade-off in gas, liveness, or a
+signer set to trust. Bitcoin Witness takes a different route: it uses exSat's already-indexed
+Bitcoin state and makes one specific fact verifiable inside a Creditcoin contract.
 
 Bitcoin Witness changes what arrives, not whether anything arrives.
 
@@ -50,9 +49,11 @@ proof of work. A Bitcoin state machine that smart contracts can read.
 
 Except they cannot, quite. The index lives on exSat's **native** (Antelope) layer; Solidity
 contracts live on exSat's **EVM** layer. exSat's own documentation says the EVM layer *"will in
-the near future"* be able to read that data. Today it cannot — and no contract on any other
-chain can read it either. (Anyone can *query* those tables over a public EOS RPC; what nobody
-can do is have a smart contract elsewhere verify what they say.)
+the near future"* be able to read that data. Today it cannot. And a contract on another chain
+has no way to reach those tables either — not because they are secret, but because reading is
+not verifying. Anyone can query them over a public EOS RPC; what no smart contract elsewhere
+can do is check their contents as part of its own execution. **RPC-readable is not the same
+thing as contract-verifiable, and that gap is the whole problem.**
 
 Bitcoin Witness builds that missing link, and then carries the fact one chain further, to
 Creditcoin.

@@ -22,10 +22,10 @@ can only trust the signers, and trust the address list those signers were pointe
 reserve is reported to the chain, never proven to it.
 
 That was not laziness on anyone's part. **Bitcoin state has never been natively readable by a
-Creditcoin contract** — and the general problem is hard enough that the attempts at it
-elsewhere (BTC Relay, SPV light clients, threshold-signature designs like tBTC) each buy their
-own expensive trade-off in gas, liveness or signer sets. When the underlying asset is not
-readable, "proof of reserves" can only mean "somebody's signature on a number".
+Creditcoin contract.** Other approaches to the general problem — BTC Relay, SPV light clients,
+threshold-signature designs like tBTC — each make their own trade-off in gas, liveness or
+signer sets. Bitcoin Witness takes a different route: it uses exSat's already-indexed Bitcoin
+state and makes one specific fact verifiable inside a Creditcoin contract.
 
 Bitcoin Witness changes what arrives. The reserve reaches Creditcoin as a fact derived from
 Bitcoin's own proof-of-work-verified UTXO set, carried by an Attestcoin attestation over a
@@ -42,9 +42,11 @@ infrastructure in crypto: a Bitcoin state machine that smart contracts can read.
 
 Except they can't, quite. That index lives on exSat's *native* (Antelope) layer. Solidity
 contracts live on exSat's *EVM* layer. exSat's own documentation says the EVM layer *"will
-in the near future"* be able to read that data. Today it cannot — and no contract on any
-other chain can read it either. Anyone can *query* those tables over a public EOS RPC; what
-nobody can do is have a smart contract elsewhere verify what they say.
+in the near future"* be able to read that data. Today it cannot. And a contract on another
+chain has no way to reach those tables either — not because they are secret, but because
+reading is not verifying. Anyone can query them over a public EOS RPC; what no smart contract
+elsewhere can do is check their contents as part of its own execution. **RPC-readable is not
+the same thing as contract-verifiable, and that gap is the whole problem.**
 
 **Bitcoin Witness builds that missing link — and then carries it one chain further, to
 Creditcoin.**

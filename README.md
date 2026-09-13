@@ -7,10 +7,11 @@ Built for [BUIDL CTC 2026 Fall](https://dorahacks.io/hackathon/buidl-ctc-2026-fa
 
 ---
 
-**Bitcoin Witness is a verifiable Bitcoin data source for Creditcoin.** exSat holds the Bitcoin
-data; Attestcoin is the mechanism that makes it checkable on chain; `ReserveGuard` is the first
-thing built on top, and it exists to show the primitive is worth something rather than to be
-the project itself.
+**Bitcoin Witness is a verifiable Bitcoin data source for Creditcoin.** exSat provides the
+Bitcoin state data; Attestcoin carries an attestation of exSat's EVM history to Creditcoin,
+where `BitcoinFactVerifier` checks the fact inside it; `ReserveGuard` is the first consumer
+built on top, and it exists to show the primitive is worth something rather than to be the
+project itself.
 
 ---
 
