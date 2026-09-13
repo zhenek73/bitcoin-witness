@@ -33,9 +33,12 @@ cannot check that number against anything: it can only trust the signers, and tr
 list those signers were pointed at. The reserve is *reported* to the chain, never *proven* to
 it.
 
-That was not a failure of imagination. It was the only thing available, because **no EVM chain
-could read Bitcoin**. When the underlying asset is invisible to the virtual machine, "proof of
-reserves" can only mean "somebody's signature on a number".
+That was not a failure of imagination. **Bitcoin state has never been natively readable by a
+Creditcoin contract.** The general problem is not unattempted elsewhere — BTC Relay, SPV light
+clients, threshold-signature designs like tBTC — but each attempt buys its own expensive
+trade-off in gas, liveness, or a signer set to trust, and none of them puts Bitcoin state in
+front of a Creditcoin contract. When the underlying asset is not readable, "proof of reserves"
+can only mean "somebody's signature on a number".
 
 Bitcoin Witness changes what arrives, not whether anything arrives.
 

@@ -7,6 +7,13 @@ Built for [BUIDL CTC 2026 Fall](https://dorahacks.io/hackathon/buidl-ctc-2026-fa
 
 ---
 
+**Bitcoin Witness is a verifiable Bitcoin data source for Creditcoin.** exSat holds the Bitcoin
+data; Attestcoin is the mechanism that makes it checkable on chain; `ReserveGuard` is the first
+thing built on top, and it exists to show the primitive is worth something rather than to be
+the project itself.
+
+---
+
 ## The problem
 
 Every wrapped Bitcoin rests on one invariant: the supply on this chain never exceeds the BTC
@@ -19,9 +26,9 @@ reads a Bitcoin node off chain, agrees on a number, signs it, and posts it. The 
 contract cannot check that number against anything — it can only trust the signers and the
 address list they were pointed at. The reserve is reported to the chain, never proven to it.
 
-That was the only thing available, because **no EVM chain could read Bitcoin.** The BTC never
-has to move for the *fact* about it to be useful — what was missing was a way to move the
-fact, as evidence rather than as testimony.
+That was the only thing available, because **Bitcoin state has never been natively readable by
+a Creditcoin contract.** The BTC never has to move for the *fact* about it to be useful — what
+was missing was a way to move the fact, as evidence rather than as testimony.
 
 ## What Bitcoin Witness does
 

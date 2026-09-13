@@ -21,9 +21,11 @@ signs it, and posts it. The consuming contract cannot check that number against 
 can only trust the signers, and trust the address list those signers were pointed at. The
 reserve is reported to the chain, never proven to it.
 
-That was not laziness on anyone's part. It was the only thing available, because **no EVM
-chain could read Bitcoin**. When the underlying asset is invisible to the virtual machine,
-"proof of reserves" can only mean "somebody's signature on a number".
+That was not laziness on anyone's part. **Bitcoin state has never been natively readable by a
+Creditcoin contract** — and the general problem is hard enough that the attempts at it
+elsewhere (BTC Relay, SPV light clients, threshold-signature designs like tBTC) each buy their
+own expensive trade-off in gas, liveness or signer sets. When the underlying asset is not
+readable, "proof of reserves" can only mean "somebody's signature on a number".
 
 Bitcoin Witness changes what arrives. The reserve reaches Creditcoin as a fact derived from
 Bitcoin's own proof-of-work-verified UTXO set, carried by an Attestcoin attestation over a
