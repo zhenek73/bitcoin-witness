@@ -43,7 +43,7 @@
    on exSat EVM, so "this event was emitted by our contract in a successful, attested
    transaction" is *not* the same statement as "this is a real Bitcoin fact". Attestation proves
    **occurrence**; the indexed relayer topic proves **authorship** — that the fact came through
-   `btcwitness`, the only code path that ever reads `utxomng.xsat`. Without that check the
+   `btcwitness`, the only code path in this system that reads `utxomng.xsat`. Without that check the
    pipeline proves nothing at all; see `contracts/asc/test_verifier.py`, which fails loudly if it
    is removed.
 

@@ -124,7 +124,8 @@ receiver with invented numbers, have Attestcoin honestly attest that real transa
 it recorded on Creditcoin as genuine.
 
 Attestation proves **occurrence**. Only the indexed relayer topic proves **authorship** — that
-the fact came through `btcwitness11`, the one code path that ever reads `utxomng.xsat`.
+the fact came through `btcwitness11`, the only code path in this system that reads
+`utxomng.xsat`.
 
 `BitcoinFactVerifier` therefore checks five things, all of them read from *inside* the attested
 bytes, so a caller chooses only *which* proven transaction to submit and never what it contains:
