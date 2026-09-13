@@ -151,7 +151,13 @@ The clean upstream fix is smaller still: Attestcoin **already** skips exactly th
 pre-Byzantium Ethereum mainnet, for exactly this class of reason, with a comment noting that the
 transaction-root check still guards against reorgs. exSat needs the same exemption.
 
-Both defects are written up in [`docs/`](docs/) and **filed upstream against Gluwa's repository**:
+Everything above is written up in [`docs/`](docs/) and **filed upstream against Gluwa's repository** —
+including the proposal that exSat become a supported Attestcoin source chain:
+
+- [gluwa/creditcoin3#1358](https://github.com/gluwa/creditcoin3/issues/1358) — **the proposal**: support
+  exSat (chain id 7200) as an Attestcoin source chain, so Bitcoin state becomes verifiable on Creditcoin.
+- [gluwa/creditcoin3#1357](https://github.com/gluwa/creditcoin3/pull/1357) — the patch that unblocks it:
+  extends the `skip_receipt_root` exemption that already exists for pre-Byzantium Ethereum mainnet.
 
 - [gluwa/creditcoin3#1355](https://github.com/gluwa/creditcoin3/issues/1355) — the attestor cannot
   follow any chain without a receipts trie, and reports it as a reorg that never happened.
@@ -247,7 +253,7 @@ root-caused against live chain data rather than guessed at.
 |---|---|
 | Native relay contract | **deployed, EOS mainnet** (`btcwitness11`), 12 real relays |
 | EVM receiver | **deployed, exSat EVM mainnet**, 12 `BitcoinUtxoAttested` events |
-| Creditcoin devnet + exSat registered | **working** (`chain_key 7`), rebuildable in one command |
+| exSat as an Attestcoin source chain | **working** (`chain_key 7`); proposed upstream as [#1358](https://github.com/gluwa/creditcoin3/issues/1358) + [#1357](https://github.com/gluwa/creditcoin3/pull/1357) |
 | Attestor against exSat mainnet | **working** — attesting live exSat blocks |
 | Creditcoin verifier | **deployed**, 9 tests incl. 5 negative paths |
 | `ReserveGuard` + `GuardedWBTC` + control | **deployed**, 5-beat solvency demo passing |
