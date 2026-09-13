@@ -67,7 +67,7 @@ Five pieces, all deployed and all running:
 
 2. **`BitcoinWitnessReceiver`** — a Solidity contract live on **exSat EVM mainnet** (chain 7200)
    at `0xBF823785C5749532AE927d7285093Eae279fe16C`, which turns the relayed fact into a standard
-   EVM event. It has emitted **6 real `BitcoinUtxoAttested` events**, all publicly checkable.
+   EVM event. It has emitted **12 real `BitcoinUtxoAttested` events**, all publicly checkable.
 
 3. **A live Attestcoin attestor watching exSat.** exSat was not a registered Attestcoin source
    chain — so we ran our own Creditcoin node, registered it (`chain_key 7`), bootstrapped an
