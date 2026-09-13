@@ -42,8 +42,9 @@ infrastructure in crypto: a Bitcoin state machine that smart contracts can read.
 
 Except they can't, quite. That index lives on exSat's *native* (Antelope) layer. Solidity
 contracts live on exSat's *EVM* layer. exSat's own documentation says the EVM layer *"will
-in the near future"* be able to read that data. Today it cannot. And nothing outside exSat
-can read it at all.
+in the near future"* be able to read that data. Today it cannot — and no contract on any
+other chain can read it either. Anyone can *query* those tables over a public EOS RPC; what
+nobody can do is have a smart contract elsewhere verify what they say.
 
 **Bitcoin Witness builds that missing link — and then carries it one chain further, to
 Creditcoin.**

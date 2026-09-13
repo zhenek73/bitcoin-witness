@@ -50,8 +50,9 @@ proof of work. A Bitcoin state machine that smart contracts can read.
 
 Except they cannot, quite. The index lives on exSat's **native** (Antelope) layer; Solidity
 contracts live on exSat's **EVM** layer. exSat's own documentation says the EVM layer *"will in
-the near future"* be able to read that data. Today it cannot, and nothing outside exSat can read
-it at all.
+the near future"* be able to read that data. Today it cannot — and no contract on any other
+chain can read it either. (Anyone can *query* those tables over a public EOS RPC; what nobody
+can do is have a smart contract elsewhere verify what they say.)
 
 Bitcoin Witness builds that missing link, and then carries the fact one chain further, to
 Creditcoin.
