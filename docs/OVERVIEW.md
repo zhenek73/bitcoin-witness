@@ -99,9 +99,9 @@ chain.
 | EVM receiver | **exSat EVM mainnet** (7200) | `0xBF823785C5749532AE927d7285093Eae279fe16C` — 7 events |
 | Attestcoin attestor | self-hosted CC3 devnet | attesting live exSat blocks, `chain_key 7` |
 | Fact verifier | self-hosted CC3 devnet | `0xc01Ee7f10EA4aF4673cFff62710E1D7792aBa8f3` |
-| Reserve guard | self-hosted CC3 devnet | `0x21cb3940e6Ba5284E1750F1109131a8E8062b9f1` |
-| Guarded wrapped BTC | self-hosted CC3 devnet | `0x3469E1DaC06611030AEce8209F07501E9A7aCC69` |
-| Unguarded control token | self-hosted CC3 devnet | `0x7d4567B7257cf869B01a47E8cf0EDB3814bDb963` |
+| Reserve guard | self-hosted CC3 devnet | `0x746DFE0F96789e62CECeeA3CA2a9b5556b3AaD6c` |
+| Guarded wrapped BTC | self-hosted CC3 devnet | `0x294c664f6D63bd1521231a2EeFC26d805ce00a08` |
+| Unguarded control token | self-hosted CC3 devnet | `0x82745827D0B8972eC0583B3100eCb30b81Db0072` |
 
 Five distinct Bitcoin UTXOs have travelled the whole path and read back `proven = true`.
 
